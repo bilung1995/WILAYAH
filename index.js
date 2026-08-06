@@ -1,404 +1,1064 @@
-const express = require("express");
-const axios = require("axios");
+require("dotenv").config();
 
-const app = express();
-app.use(express.json());
+const http = require("http");
+const fs = require("fs");
+const path = require("path");
+const TelegramBot = require("node-telegram-bot-api");
 
-const PORT = process.env.PORT || 3000;
+// ======================================================
+// ENV
+// ======================================================
 
-const GREEN_API_ID = process.env.GREEN_API_ID;
-const GREEN_API_TOKEN = process.env.GREEN_API_TOKEN;
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
+const TELEGRAM_TOKEN =
+  process.env.TELEGRAM_TOKEN ||
+  process.env.BOT_TOKEN;
 
-// Chat Telegram terakhir yang menekan /start
-let telegramChatId = null;
+const PORT =
+  Number(process.env.PORT) || 8080;
 
-// Offset Telegram
-let telegramOffset = 0;
+const GREEN_API_URL =
+  process.env.GREEN_API_URL ||
+  "https://api.green-api.com";
 
-// Mencegah polling Telegram berjalan dua kali
-let telegramPolling = false;
+const GREEN_API_INSTANCE_ID =
+  process.env.GREEN_API_INSTANCE_ID ||
+  process.env.GREEN_INSTANCE_ID;
 
-// ==================================================
-// START SERVER
-// ==================================================
+const GREEN_API_TOKEN =
+  process.env.GREEN_API_TOKEN ||
+  process.env.GREEN_TOKEN;
 
-app.get("/", (req, res) => {
-  res.send("✅ BOT WHATSAPP → TELEGRAM AKTIF");
-});
+const ADMIN_ID =
+  String(
+    process.env.ADMIN_ID ||
+    process.env.TELEGRAM_CHAT_ID ||
+    ""
+  );
 
-app.listen(PORT, () => {
-  console.log("=================================");
-  console.log("🚀 BOT WHATSAPP → TELEGRAM AKTIF");
-  console.log(`🌐 PORT: ${PORT}`);
-  console.log("=================================");
+// ======================================================
+// VALIDASI
+// ======================================================
 
-  startTelegramPolling();
-});
+if (!TELEGRAM_TOKEN) {
+  console.error(
+    "❌ TELEGRAM_TOKEN belum diisi."
+  );
 
-// ==================================================
-// KIRIM PESAN KE TELEGRAM
-// ==================================================
+  process.exit(1);
+}
 
-async function sendTelegramMessage(chatId, text) {
+console.log(
+  "======================================"
+);
+
+console.log(
+  "🚀 BOT TELEGRAM + WHATSAPP STARTING"
+);
+
+console.log(
+  "======================================"
+);
+
+// ======================================================
+// DATABASE SEDERHANA
+// ======================================================
+
+const DATA_FILE = path.join(
+  __dirname,
+  "bot-data.json"
+);
+
+function defaultDatabase() {
+  return {
+    users: {},
+    locations: {},
+    blacklist: [],
+    topups: {}
+  };
+}
+
+function loadDatabase() {
   try {
-    const url =
-      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    if (!fs.existsSync(DATA_FILE)) {
+      const data =
+        defaultDatabase();
 
-    const response = await axios.post(
-      url,
-      {
-        chat_id: chatId,
-        text: text
-      },
-      {
-        timeout: 15000
-      }
-    );
+      fs.writeFileSync(
+        DATA_FILE,
+        JSON.stringify(
+          data,
+          null,
+          2
+        )
+      );
 
-    console.log("✅ PESAN BERHASIL DIKIRIM KE TELEGRAM");
+      return data;
+    }
 
-    return response.data;
+    const raw =
+      fs.readFileSync(
+        DATA_FILE,
+        "utf8"
+      );
+
+    return {
+      ...defaultDatabase(),
+      ...JSON.parse(raw)
+    };
 
   } catch (error) {
     console.error(
-      "❌ GAGAL KIRIM TELEGRAM:",
-      error.response?.data || error.message
+      "❌ DATABASE ERROR:",
+      error.message
     );
 
-    return null;
+    return defaultDatabase();
   }
 }
 
-// ==================================================
-// TELEGRAM POLLING
-// ==================================================
-// Polling dilakukan SATU PER SATU.
-// Tidak menggunakan setInterval sehingga tidak terjadi
-// beberapa getUpdates bersamaan yang menyebabkan 409.
-// ==================================================
+let database =
+  loadDatabase();
 
-async function startTelegramPolling() {
+function saveDatabase() {
+  try {
+    fs.writeFileSync(
+      DATA_FILE,
+      JSON.stringify(
+        database,
+        null,
+        2
+      )
+    );
+  } catch (error) {
+    console.error(
+      "❌ GAGAL MENYIMPAN DATABASE:",
+      error.message
+    );
+  }
+}
 
-  if (telegramPolling) {
-    console.log("⚠️ Telegram polling sudah berjalan.");
+// ======================================================
+// TELEGRAM
+// ======================================================
+
+const bot =
+  new TelegramBot(
+    TELEGRAM_TOKEN,
+    {
+      polling: true
+    }
+  );
+
+console.log(
+  "✅ Telegram polling aktif."
+);
+
+// ======================================================
+// USER
+// ======================================================
+
+function getUser(chatId) {
+  const id =
+    String(chatId);
+
+  if (!database.users[id]) {
+    database.users[id] = {
+      id,
+      firstName: "",
+      username: "",
+      balance: 0,
+      createdAt:
+        new Date().toISOString()
+    };
+
+    saveDatabase();
+  }
+
+  return database.users[id];
+}
+
+// ======================================================
+// LOKASI USER
+// ======================================================
+
+function getUserLocations(chatId) {
+  const id =
+    String(chatId);
+
+  if (!database.locations[id]) {
+    database.locations[id] = [];
+  }
+
+  return database.locations[id];
+}
+
+function saveUserLocation(
+  chatId,
+  location
+) {
+  const id =
+    String(chatId);
+
+  if (!database.locations[id]) {
+    database.locations[id] = [];
+  }
+
+  const exists =
+    database.locations[id].some(
+      item =>
+        item.kecamatanCode ===
+        location.kecamatanCode
+    );
+
+  if (!exists) {
+    database.locations[id].push(
+      location
+    );
+  }
+
+  saveDatabase();
+}
+
+// ======================================================
+// KEYBOARD UTAMA
+// ======================================================
+
+function mainKeyboard() {
+  return {
+    keyboard: [
+      [
+        {
+          text: "🏙️ TAMBAH KOTA"
+        },
+        {
+          text: "📍 KOTA YANG DIPILIH"
+        }
+      ],
+      [
+        {
+          text: "👤 PROFIL"
+        },
+        {
+          text: "💳 TOP UP"
+        }
+      ],
+      [
+        {
+          text: "📊 STATUS"
+        },
+        {
+          text: "❓ BANTUAN"
+        }
+      ],
+      [
+        {
+          text: "👨‍💼 HUBUNGI ADMIN"
+        },
+        {
+          text: "🚫 NOMOR BLACKLIST"
+        }
+      ],
+      [
+        {
+          text: "🛠️ PANEL ADMIN"
+        }
+      ]
+    ],
+    resize_keyboard: true
+  };
+}
+
+// ======================================================
+// START
+// ======================================================
+
+bot.onText(
+  /^\/start$/,
+  async message => {
+    const chatId =
+      message.chat.id;
+
+    const user =
+      getUser(chatId);
+
+    user.firstName =
+      message.from?.first_name ||
+      "";
+
+    user.username =
+      message.from?.username ||
+      "";
+
+    saveDatabase();
+
+    await bot.sendMessage(
+      chatId,
+      "🎉 BOT BERHASIL AKTIF!\n\n" +
+      "✅ Telegram terhubung\n" +
+      "✅ Chat ID berhasil terdeteksi\n" +
+      "✅ Siap menerima pesan WhatsApp\n\n" +
+      `🆔 Chat ID Anda: ${chatId}\n\n` +
+      "Silakan pilih menu di bawah.",
+      {
+        reply_markup:
+          mainKeyboard()
+      }
+    );
+
+    console.log(
+      `✅ /start dari ${chatId}`
+    );
+  }
+);
+
+// ======================================================
+// ID
+// ======================================================
+
+bot.onText(
+  /^\/id$/,
+  async message => {
+    const chatId =
+      message.chat.id;
+
+    await bot.sendMessage(
+      chatId,
+      `🆔 Chat ID Anda:\n\n${chatId}`
+    );
+  }
+);
+
+// ======================================================
+// PROFIL
+// ======================================================
+
+async function showProfile(
+  chatId
+) {
+  const user =
+    getUser(chatId);
+
+  const locations =
+    getUserLocations(chatId);
+
+  await bot.sendMessage(
+    chatId,
+    "👤 PROFIL\n\n" +
+    `🆔 Telegram ID: ${chatId}\n` +
+    `👤 Nama: ${
+      user.firstName || "-"
+    }\n` +
+    `🔗 Username: ${
+      user.username
+        ? "@" + user.username
+        : "-"
+    }\n` +
+    `💰 Saldo: Rp ${Number(
+      user.balance || 0
+    ).toLocaleString("id-ID")}\n` +
+    `📍 Wilayah: ${
+      locations.length
+    }`,
+    {
+      reply_markup:
+        mainKeyboard()
+    }
+  );
+}
+
+// ======================================================
+// KOTA YANG DIPILIH
+// ======================================================
+
+async function showLocations(
+  chatId
+) {
+  const locations =
+    getUserLocations(chatId);
+
+  if (locations.length === 0) {
+    await bot.sendMessage(
+      chatId,
+      "📍 KOTA YANG DIPILIH\n\n" +
+      "Belum ada wilayah yang dipilih.",
+      {
+        reply_markup:
+          mainKeyboard()
+      }
+    );
+
     return;
   }
 
-  telegramPolling = true;
+  let text =
+    "📍 KOTA YANG DIPILIH\n\n";
 
-  console.log("📡 Memulai Telegram polling...");
+  locations.forEach(
+    (location, index) => {
+      text +=
+        `${index + 1}. ` +
+        `${location.provinsi}\n` +
+        `   ${location.kabupaten}\n` +
+        `   ${location.kecamatan}\n\n`;
+    }
+  );
 
-  // Karena kita menggunakan getUpdates,
-  // pastikan webhook Telegram tidak aktif.
-  try {
+  await bot.sendMessage(
+    chatId,
+    text,
+    {
+      reply_markup:
+        mainKeyboard()
+    }
+  );
+}
 
-    const deleteWebhookUrl =
-      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook`;
+// ======================================================
+// TOP UP
+// ======================================================
 
-    await axios.get(deleteWebhookUrl, {
-      params: {
-        drop_pending_updates: false
-      },
-      timeout: 15000
-    });
+async function showTopup(
+  chatId
+) {
+  await bot.sendMessage(
+    chatId,
+    "💳 TOP UP\n\n" +
+    "Silakan transfer ke salah satu rekening berikut:\n\n" +
+    "🏦 SEABANK\n" +
+    "901040978290\n" +
+    "a.n. HAMBALI\n\n" +
+    "💰 DANA\n" +
+    "083824101264\n" +
+    "a.n. HAMBALI\n\n" +
+    "💚 GOPAY\n" +
+    "083824101264\n" +
+    "a.n. HAMBALI\n\n" +
+    "Setelah transfer, hubungi admin untuk verifikasi.",
+    {
+      reply_markup:
+        mainKeyboard()
+    }
+  );
+}
 
-    console.log("✅ Telegram webhook dinonaktifkan.");
+// ======================================================
+// BANTUAN
+// ======================================================
 
-  } catch (error) {
+async function showHelp(
+  chatId
+) {
+  await bot.sendMessage(
+    chatId,
+    "❓ BANTUAN\n\n" +
+    "1️⃣ Tekan /start untuk membuka menu.\n\n" +
+    "2️⃣ Pilih TAMBAH KOTA untuk menentukan wilayah.\n\n" +
+    "3️⃣ Pilih provinsi.\n\n" +
+    "4️⃣ Pilih kabupaten/kota.\n\n" +
+    "5️⃣ Pilih kecamatan.\n\n" +
+    "Setelah wilayah tersimpan, pesan dari grup WhatsApp yang sesuai wilayah akan diteruskan ke Telegram.",
+    {
+      reply_markup:
+        mainKeyboard()
+    }
+  );
+}
 
-    console.error(
-      "⚠️ Gagal mengecek webhook Telegram:",
-      error.response?.data || error.message
+// ======================================================
+// HUBUNGI ADMIN
+// ======================================================
+
+async function showAdmin(
+  chatId
+) {
+  await bot.sendMessage(
+    chatId,
+    "👨‍💼 HUBUNGI ADMIN\n\n" +
+    "Telegram: @Hambali1995\n\n" +
+    "WhatsApp 1:\n" +
+    "083160776091\n\n" +
+    "WhatsApp 2:\n" +
+    "083182333956",
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text:
+                "📱 WhatsApp 1",
+              url:
+                "https://wa.me/6283160776091"
+            }
+          ],
+          [
+            {
+              text:
+                "📱 WhatsApp 2",
+              url:
+                "https://wa.me/6283182333956"
+            }
+          ]
+        ]
+      }
+    }
+  );
+}
+
+// ======================================================
+// PANEL ADMIN
+// ======================================================
+
+async function showAdminPanel(
+  chatId
+) {
+  if (
+    !ADMIN_ID ||
+    String(chatId) !==
+      ADMIN_ID
+  ) {
+    await bot.sendMessage(
+      chatId,
+      "⛔ AKSES DITOLAK."
     );
+
+    return;
   }
 
-  // Loop tunggal
-  while (true) {
+  const users =
+    Object.keys(
+      database.users
+    ).length;
 
+  const blacklist =
+    database.blacklist.length;
+
+  const topups =
+    Object.keys(
+      database.topups
+    ).length;
+
+  await bot.sendMessage(
+    chatId,
+    "🛠️ PANEL ADMIN\n\n" +
+    `👥 User: ${users}\n` +
+    `🚫 Blacklist: ${blacklist}\n` +
+    `💳 Transaksi Top Up: ${topups}`,
+    {
+      reply_markup:
+        mainKeyboard()
+    }
+  );
+}
+
+// ======================================================
+// BLACKLIST
+// ======================================================
+
+async function showBlacklist(
+  chatId
+) {
+  if (
+    !ADMIN_ID ||
+    String(chatId) !==
+      ADMIN_ID
+  ) {
+    await bot.sendMessage(
+      chatId,
+      "⛔ Menu blacklist hanya untuk admin."
+    );
+
+    return;
+  }
+
+  if (
+    database.blacklist.length ===
+    0
+  ) {
+    await bot.sendMessage(
+      chatId,
+      "🚫 BLACKLIST\n\n" +
+      "Belum ada nomor blacklist."
+    );
+
+    return;
+  }
+
+  let text =
+    "🚫 NOMOR BLACKLIST\n\n";
+
+  database.blacklist.forEach(
+    (item, index) => {
+      text +=
+        `${index + 1}. ${item}\n`;
+    }
+  );
+
+  await bot.sendMessage(
+    chatId,
+    text
+  );
+}
+
+// ======================================================
+// PESAN MENU
+// ======================================================
+
+bot.on(
+  "message",
+  async message => {
     try {
+      if (
+        !message.text ||
+        message.text.startsWith("/")
+      ) {
+        return;
+      }
 
-      const url =
-        `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates`;
+      const chatId =
+        message.chat.id;
 
-      const response = await axios.get(
-        url,
-        {
-          params: {
-            offset: telegramOffset,
-            timeout: 25
-          },
-          timeout: 35000
-        }
-      );
+      const text =
+        message.text.trim();
 
-      const updates = response.data.result || [];
+      getUser(chatId);
 
-      for (const update of updates) {
-
-        telegramOffset = update.update_id + 1;
-
-        if (!update.message) {
-          continue;
-        }
-
-        const message = update.message;
-        const chat = message.chat;
-
-        const chatId = chat.id;
-        const text = message.text || "";
-
-        console.log("=================================");
-        console.log("📥 PESAN TELEGRAM DITERIMA");
-        console.log("🆔 Chat ID:", chatId);
-        console.log("💬 Pesan:", text);
-        console.log("=================================");
-
-        // Simpan Chat ID terakhir
-        telegramChatId = chatId;
-
-        // ==================================================
-        // /START
-        // ==================================================
-
-        if (text === "/start") {
-
-          await sendTelegramMessage(
-            chatId,
-            "🎉 BOT BERHASIL AKTIF!\n\n" +
-            "✅ Telegram terhubung\n" +
-            "✅ Chat ID berhasil terdeteksi\n" +
-            "✅ Siap menerima pesan WhatsApp\n\n" +
-            `🆔 Chat ID Anda: ${chatId}\n\n` +
-            "Kirim /id untuk melihat Chat ID lagi."
+      switch (text) {
+        case "👤 PROFIL":
+          await showProfile(
+            chatId
           );
+          break;
 
-          continue;
-        }
-
-        // ==================================================
-        // /ID
-        // ==================================================
-
-        if (text === "/id") {
-
-          await sendTelegramMessage(
-            chatId,
-            `🆔 Chat ID Telegram Anda:\n\n${chatId}`
+        case "📍 KOTA YANG DIPILIH":
+          await showLocations(
+            chatId
           );
+          break;
 
-          continue;
-        }
-
-        // ==================================================
-        // PESAN BIASA
-        // ==================================================
-
-        if (text) {
-
-          await sendTelegramMessage(
-            chatId,
-            "✅ Pesan Telegram diterima.\n\n" +
-            "Bot siap menerima pesan WhatsApp."
+        case "💳 TOP UP":
+          await showTopup(
+            chatId
           );
-        }
+          break;
+
+        case "❓ BANTUAN":
+          await showHelp(
+            chatId
+          );
+          break;
+
+        case "👨‍💼 HUBUNGI ADMIN":
+          await showAdmin(
+            chatId
+          );
+          break;
+
+        case "🛠️ PANEL ADMIN":
+          await showAdminPanel(
+            chatId
+          );
+          break;
+
+        case "🚫 NOMOR BLACKLIST":
+          await showBlacklist(
+            chatId
+          );
+          break;
+
+        case "📊 STATUS":
+          await bot.sendMessage(
+            chatId,
+            "📊 STATUS\n\n" +
+            "🟢 Telegram: AKTIF\n" +
+            "🟢 Server: AKTIF\n" +
+            "🟢 Sistem siap menerima pesan WhatsApp.",
+            {
+              reply_markup:
+                mainKeyboard()
+            }
+          );
+          break;
+
+        case "🏙️ TAMBAH KOTA":
+          await bot.sendMessage(
+            chatId,
+            "🏙️ TAMBAH KOTA\n\n" +
+            "Modul pemilihan wilayah Indonesia siap digunakan.\n\n" +
+            "Provinsi → Kabupaten/Kota → Kecamatan.",
+            {
+              reply_markup:
+                mainKeyboard()
+            }
+          );
+          break;
+
+        default:
+          break;
       }
 
     } catch (error) {
-
       console.error(
-        "❌ ERROR TELEGRAM:",
-        error.response?.data || error.message
+        "❌ ERROR MESSAGE:",
+        error
+      );
+    }
+  }
+);
+
+// ======================================================
+// ERROR TELEGRAM
+// ======================================================
+
+bot.on(
+  "polling_error",
+  error => {
+    console.error(
+      "❌ TELEGRAM POLLING ERROR:",
+      error.message
+    );
+  }
+);
+
+// ======================================================
+// GREEN API WEBHOOK
+// ======================================================
+
+async function handleWhatsAppWebhook(
+  body
+) {
+  console.log(
+    "📲 WEBHOOK WHATSAPP MASUK"
+  );
+
+  console.log(
+    JSON.stringify(
+      body,
+      null,
+      2
+    )
+  );
+
+  if (
+    !body ||
+    body.typeWebhook !==
+      "incomingMessageReceived"
+  ) {
+    return;
+  }
+
+  const messageData =
+    body.messageData || {};
+
+  const senderData =
+    messageData.senderData || {};
+
+  const chatId =
+    senderData.chatId || "";
+
+  // Hanya grup WhatsApp
+  if (
+    !chatId.endsWith("@g.us")
+  ) {
+    return;
+  }
+
+  let messageText = "";
+
+  if (
+    messageData.typeMessage ===
+    "textMessage"
+  ) {
+    messageText =
+      messageData
+        .textMessageData
+        ?.textMessage || "";
+  }
+
+  if (
+    messageData.typeMessage ===
+    "extendedTextMessage"
+  ) {
+    messageText =
+      messageData
+        .extendedTextMessageData
+        ?.text || "";
+  }
+
+  if (!messageText) {
+    return;
+  }
+
+  const groupName =
+    senderData.chatName ||
+    "WhatsApp Group";
+
+  const senderName =
+    senderData.senderName ||
+    "Tidak diketahui";
+
+  console.log(
+    `📲 GRUP: ${groupName}`
+  );
+
+  console.log(
+    `👤 PENGIRIM: ${senderName}`
+  );
+
+  console.log(
+    `💬 PESAN: ${messageText}`
+  );
+
+  // ====================================================
+  // UNTUK SEMENTARA:
+  // KIRIM KE USER YANG SUDAH MEMILIH WILAYAH
+  //
+  // PENCocokan kecamatan akan disambungkan
+  // setelah struktur gps.js Anda diketahui.
+  // ====================================================
+
+    const userIds =
+    Object.keys(
+      database.locations
+    );
+
+  for (
+    const telegramId of userIds
+  ) {
+    const locations =
+      database.locations[
+        telegramId
+      ];
+
+    if (
+      !locations ||
+      locations.length === 0
+    ) {
+      continue;
+    }
+
+    // --------------------------------------------------
+    // NOTIFIKASI
+    // --------------------------------------------------
+
+    const text =
+      "📩 PESAN WHATSAPP BARU\n\n" +
+      `👥 Grup: ${groupName}\n` +
+      `👤 Pengirim: ${senderName}\n\n` +
+      `💬 ${messageText}`;
+
+    try {
+      await bot.sendMessage(
+        telegramId,
+        text
       );
 
-      // Tunggu sebentar sebelum mencoba lagi
-      await new Promise(
-        resolve => setTimeout(resolve, 5000)
+      console.log(
+        `✅ Pesan dikirim ke Telegram ${telegramId}`
+      );
+
+    } catch (error) {
+      console.error(
+        `❌ Gagal kirim Telegram ${telegramId}:`,
+        error.response?.body ||
+        error.message
       );
     }
   }
 }
 
-// ==================================================
-// WEBHOOK GREEN API
-// ==================================================
+// ======================================================
+// HTTP SERVER
+// ======================================================
 
-app.post(
-  "/webhook/greenapi",
-  async (req, res) => {
+const server =
+  http.createServer(
+    async (
+      request,
+      response
+    ) => {
+      try {
+        // ----------------------------------------------
+        // HEALTH CHECK
+        // ----------------------------------------------
 
-    try {
+        if (
+          request.method === "GET" &&
+          request.url === "/"
+        ) {
+          response.writeHead(
+            200,
+            {
+              "Content-Type":
+                "application/json"
+            }
+          );
 
-      console.log("=================================");
-      console.log("📩 WEBHOOK GREEN API DITERIMA");
-      console.log("=================================");
+          response.end(
+            JSON.stringify({
+              status: "OK",
+              telegram: "ACTIVE",
+              whatsapp: "WEBHOOK READY",
+              time:
+                new Date().toISOString()
+            })
+          );
 
-      const data = req.body;
+          return;
+        }
 
-      // Tampilkan data webhook di Railway
-      console.log(
-        JSON.stringify(data, null, 2)
-      );
+        // ----------------------------------------------
+        // WEBHOOK WHATSAPP
+        // ----------------------------------------------
 
-      // ==================================================
-      // HANYA PESAN MASUK
-      // ==================================================
+        if (
+          request.method === "POST" &&
+          request.url === "/webhook"
+        ) {
+          let body = "";
 
-      if (
-        data.typeWebhook !==
-        "incomingMessageReceived"
-      ) {
+          request.on(
+            "data",
+            chunk => {
+              body += chunk.toString();
+            }
+          );
 
-        console.log(
-          "ℹ️ Webhook bukan pesan masuk."
+          request.on(
+            "end",
+            async () => {
+              try {
+                const data =
+                  JSON.parse(body);
+
+                await handleWhatsAppWebhook(
+                  data
+                );
+
+                response.writeHead(
+                  200,
+                  {
+                    "Content-Type":
+                      "application/json"
+                  }
+                );
+
+                response.end(
+                  JSON.stringify({
+                    success: true
+                  })
+                );
+
+              } catch (error) {
+                console.error(
+                  "❌ WEBHOOK ERROR:",
+                  error.message
+                );
+
+                response.writeHead(
+                  400,
+                  {
+                    "Content-Type":
+                      "application/json"
+                  }
+                );
+
+                response.end(
+                  JSON.stringify({
+                    success: false
+                  })
+                );
+              }
+            }
+          );
+
+          return;
+        }
+
+        response.writeHead(404);
+        response.end("Not Found");
+
+      } catch (error) {
+        console.error(
+          "❌ SERVER ERROR:",
+          error.message
         );
 
-        return res.status(200).json({
-          success: true,
-          ignored: true
-        });
-      }
-
-      const messageData =
-        data.messageData;
-
-      if (!messageData) {
-
-        console.log(
-          "⚠️ messageData tidak ditemukan."
-        );
-
-        return res.status(200).json({
-          success: true,
-          ignored: true
-        });
-      }
-
-      // ==================================================
-      // DATA PENGIRIM
-      // ==================================================
-
-      const senderData =
-        messageData.senderData || {};
-
-      const whatsappChatId =
-        senderData.chatId || "";
-
-      const senderName =
-        senderData.senderName ||
-        "WhatsApp";
-
-      const groupName =
-        senderData.chatName ||
-        "Grup WhatsApp";
-
-      // ==================================================
-      // PASTIKAN PESAN DARI GRUP
-      // ==================================================
-
-      if (
-        !whatsappChatId.endsWith("@g.us")
-      ) {
-
-        console.log(
-          "ℹ️ Pesan bukan berasal dari grup."
-        );
-
-        return res.status(200).json({
-          success: true,
-          ignored: true
-        });
-      }
-
-      // ==================================================
-      // AMBIL TEKS PESAN
-      // ==================================================
-
-      let text = "";
-
-      if (
-        messageData.typeMessage ===
-        "textMessage"
-      ) {
-
-        text =
-          messageData
-            .textMessageData
-            ?.textMessage || "";
-      }
-
-      // ==================================================
-      // PESAN SHARE / TEKS
-      // ==================================================
-
-      if (!text) {
-
-        console.log(
-          "ℹ️ Pesan tidak memiliki teks."
-        );
-
-        return res.status(200).json({
-          success: true,
-          ignored: true
-        });
-      }
-
-      console.log("📨 PESAN WHATSAPP:");
-      console.log(text);
-
-      // ==================================================
-      // FORMAT TELEGRAM
-      // ==================================================
-
-      const telegramText =
-        "📢 PESAN WHATSAPP\n\n" +
-        `👥 Grup: ${groupName}\n` +
-        `👤 Pengirim: ${senderName}\n\n` +
-        text;
-
-      // ==================================================
-      // KIRIM KE TELEGRAM
-      // ==================================================
-
-      if (telegramChatId) {
-
-        console.log(
-          "📤 MENGIRIM PESAN WHATSAPP KE TELEGRAM..."
-        );
-
-        await sendTelegramMessage(
-          telegramChatId,
-          telegramText
-        );
-
-      } else {
-
-        console.log(
-          "⚠️ BELUM ADA CHAT ID TELEGRAM."
-        );
-
-        console.log(
-          "Buka bot Telegram lalu tekan /start."
+        response.writeHead(500);
+        response.end(
+          "Internal Server Error"
         );
       }
-
-      return res.status(200).json({
-        success: true
-      });
-
-    } catch (error) {
-
-      console.error(
-        "❌ ERROR GREEN API:",
-        error.response?.data ||
-        error.message
-      );
-
-      // Tetap jawab 200 agar webhook tidak terus
-      // dianggap gagal oleh Green API.
-      return res.status(200).json({
-        success: false
-      });
     }
+  );
+
+// ======================================================
+// START SERVER
+// ======================================================
+
+server.listen(
+  PORT,
+  "0.0.0.0",
+  () => {
+    console.log(
+      "======================================"
+    );
+
+    console.log(
+      `🌐 SERVER PORT: ${PORT}`
+    );
+
+    console.log(
+      "🌐 WEBHOOK: /webhook"
+    );
+
+    console.log(
+      "🟢 SERVER AKTIF"
+    );
+
+    console.log(
+      "======================================"
+    );
+  }
+);
+
+// ======================================================
+// SHUTDOWN
+// ======================================================
+
+process.on(
+  "SIGTERM",
+  () => {
+    console.log(
+      "⚠️ SIGTERM diterima."
+    );
+
+    bot.stopPolling();
+
+    server.close(
+      () => {
+        console.log(
+          "🛑 Server berhenti."
+        );
+
+        process.exit(0);
+      }
+    );
+  }
+);
+
+process.on(
+  "SIGINT",
+  () => {
+    console.log(
+      "⚠️ SIGINT diterima."
+    );
+
+    bot.stopPolling();
+
+    server.close(
+      () => {
+        process.exit(0);
+      }
+    );
   }
 );
