@@ -1,84 +1,70 @@
+// ======================================================
 // gps.js
-// Pengelola wilayah Indonesia
-// Alur:
-// Provinsi -> Kabupaten/Kota -> Kecamatan
+// API WILAYAH INDONESIA
+// ======================================================
 
 const axios = require("axios");
 
-const API_BASE = "https://wilayah.id/api";
+const API_URL =
+  "https://www.emsifa.com/api-wilayah-indonesia/api";
 
-// ========================================
-// AMBIL SEMUA PROVINSI
-// ========================================
+
+// ======================================================
+// AMBIL PROVINSI
+// ======================================================
 
 async function getProvinsi() {
-  try {
-    const response = await axios.get(
-      `${API_BASE}/provinces.json`
+
+  const response =
+    await axios.get(
+      `${API_URL}/provinces.json`
     );
 
-    return response.data.data || [];
+  return response.data;
 
-  } catch (error) {
-    console.error(
-      "❌ Gagal mengambil data provinsi:",
-      error.message
-    );
-
-    return [];
-  }
 }
 
-// ========================================
-// AMBIL KABUPATEN / KOTA
-// ========================================
 
-async function getKabupaten(provinceCode) {
-  try {
-    const response = await axios.get(
-      `${API_BASE}/regencies/${provinceCode}.json`
+// ======================================================
+// AMBIL KABUPATEN/KOTA
+// ======================================================
+
+async function getKabupaten(
+  provinceId
+) {
+
+  const response =
+    await axios.get(
+      `${API_URL}/regencies/${provinceId}.json`
     );
 
-    return response.data.data || [];
+  return response.data;
 
-  } catch (error) {
-    console.error(
-      "❌ Gagal mengambil data kabupaten/kota:",
-      error.message
-    );
-
-    return [];
-  }
 }
 
-// ========================================
+
+// ======================================================
 // AMBIL KECAMATAN
-// ========================================
+// ======================================================
 
-async function getKecamatan(regencyCode) {
-  try {
-    const response = await axios.get(
-      `${API_BASE}/districts/${regencyCode}.json`
+async function getKecamatan(
+  regencyId
+) {
+
+  const response =
+    await axios.get(
+      `${API_URL}/districts/${regencyId}.json`
     );
 
-    return response.data.data || [];
+  return response.data;
 
-  } catch (error) {
-    console.error(
-      "❌ Gagal mengambil data kecamatan:",
-      error.message
-    );
-
-    return [];
-  }
 }
 
-// ========================================
-// EXPORT
-// ========================================
 
 module.exports = {
+
   getProvinsi,
   getKabupaten,
   getKecamatan
+
 };
