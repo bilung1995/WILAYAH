@@ -3,9 +3,11 @@ require("dotenv").config();
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+
 const TelegramBot = require("node-telegram-bot-api");
 
 const subscription = require("./subscription");
+const blacklist = require("./blacklist");
 
 // ======================================================
 // ENV
