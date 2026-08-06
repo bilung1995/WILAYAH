@@ -435,24 +435,7 @@ async function showTopup(chatId) {
 
 }
 
-    "💳 TOP UP\n\n" +
-    "Silakan transfer ke salah satu rekening berikut:\n\n" +
-    "🏦 SEABANK\n" +
-    "901040978290\n" +
-    "a.n. HAMBALI\n\n" +
-    "💰 DANA\n" +
-    "083824101264\n" +
-    "a.n. HAMBALI\n\n" +
-    "💚 GOPAY\n" +
-    "083824101264\n" +
-    "a.n. HAMBALI\n\n" +
-    "Setelah transfer, hubungi admin untuk verifikasi.",
-    {
-      reply_markup:
-        mainKeyboard()
-    }
-  );
-}
+
 
 // ======================================================
 // BANTUAN
