@@ -10,57 +10,57 @@ const GREEN_API_ID = process.env.GREEN_API_ID;
 const GREEN_API_TOKEN = process.env.GREEN_API_TOKEN;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
+// Chat Telegram terakhir yang menekan /start
 let telegramChatId = null;
+
+// Offset Telegram
 let telegramOffset = 0;
 
-// ========================================
-// CEK CONFIG
-// ========================================
+// Mencegah polling Telegram berjalan dua kali
+let telegramPolling = false;
 
-console.log("=================================");
-console.log("🚀 BOT WHATSAPP → TELEGRAM");
-console.log("=================================");
-
-if (!GREEN_API_ID) {
-  console.error("❌ GREEN_API_ID belum diisi");
-}
-
-if (!GREEN_API_TOKEN) {
-  console.error("❌ GREEN_API_TOKEN belum diisi");
-}
-
-if (!TELEGRAM_BOT_TOKEN) {
-  console.error("❌ TELEGRAM_BOT_TOKEN belum diisi");
-}
-
-// ========================================
-// SERVER
-// ========================================
+// ==================================================
+// START SERVER
+// ==================================================
 
 app.get("/", (req, res) => {
   res.send("✅ BOT WHATSAPP → TELEGRAM AKTIF");
 });
 
-// ========================================
-// KIRIM PESAN TELEGRAM
-// ========================================
+app.listen(PORT, () => {
+  console.log("=================================");
+  console.log("🚀 BOT WHATSAPP → TELEGRAM AKTIF");
+  console.log(`🌐 PORT: ${PORT}`);
+  console.log("=================================");
+
+  startTelegramPolling();
+});
+
+// ==================================================
+// KIRIM PESAN KE TELEGRAM
+// ==================================================
 
 async function sendTelegramMessage(chatId, text) {
   try {
     const url =
       `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
 
-    const response = await axios.post(url, {
-      chat_id: chatId,
-      text: text
-    });
+    const response = await axios.post(
+      url,
+      {
+        chat_id: chatId,
+        text: text
+      },
+      {
+        timeout: 15000
+      }
+    );
 
-    console.log("✅ Pesan berhasil dikirim ke Telegram");
+    console.log("✅ PESAN BERHASIL DIKIRIM KE TELEGRAM");
 
     return response.data;
 
   } catch (error) {
-
     console.error(
       "❌ GAGAL KIRIM TELEGRAM:",
       error.response?.data || error.message
@@ -70,129 +70,158 @@ async function sendTelegramMessage(chatId, text) {
   }
 }
 
-// ========================================
+// ==================================================
 // TELEGRAM POLLING
-// MENERIMA /START DAN PESAN USER
-// ========================================
+// ==================================================
+// Polling dilakukan SATU PER SATU.
+// Tidak menggunakan setInterval sehingga tidak terjadi
+// beberapa getUpdates bersamaan yang menyebabkan 409.
+// ==================================================
 
-async function checkTelegramUpdates() {
+async function startTelegramPolling() {
 
-  if (!TELEGRAM_BOT_TOKEN) {
+  if (telegramPolling) {
+    console.log("⚠️ Telegram polling sudah berjalan.");
     return;
   }
 
+  telegramPolling = true;
+
+  console.log("📡 Memulai Telegram polling...");
+
+  // Karena kita menggunakan getUpdates,
+  // pastikan webhook Telegram tidak aktif.
   try {
 
-    const url =
-      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates`;
+    const deleteWebhookUrl =
+      `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook`;
 
-    const response = await axios.get(url, {
+    await axios.get(deleteWebhookUrl, {
       params: {
-        offset: telegramOffset,
-        timeout: 10
+        drop_pending_updates: false
       },
       timeout: 15000
     });
 
-    const updates = response.data.result || [];
-
-    for (const update of updates) {
-
-      telegramOffset = update.update_id + 1;
-
-      if (!update.message) {
-        continue;
-      }
-
-      const message = update.message;
-
-      const chat = message.chat;
-
-      const chatId = chat.id;
-
-      const text = message.text || "";
-
-      console.log("📥 Pesan Telegram diterima");
-      console.log("Chat ID:", chatId);
-      console.log("Text:", text);
-
-      // Simpan chat ID Telegram
-      telegramChatId = chatId;
-
-      // ==================================
-      // /START
-      // ==================================
-
-      if (text === "/start") {
-
-        const welcome =
-          "🎉 BOT BERHASIL AKTIF!\n\n" +
-          "✅ Telegram terhubung\n" +
-          "✅ Chat ID berhasil terdeteksi\n" +
-          "✅ Siap menerima pesan WhatsApp\n\n" +
-          `🆔 Chat ID Anda: ${chatId}\n\n` +
-          "Kirim /id untuk melihat Chat ID lagi.";
-
-        await sendTelegramMessage(
-          chatId,
-          welcome
-        );
-
-        continue;
-      }
-
-      // ==================================
-      // /ID
-      // ==================================
-
-      if (text === "/id") {
-
-        await sendTelegramMessage(
-          chatId,
-          `🆔 Chat ID Telegram Anda:\n\n${chatId}`
-        );
-
-        continue;
-      }
-
-      // ==================================
-      // PESAN BIASA
-      // ==================================
-
-      if (text) {
-
-        await sendTelegramMessage(
-          chatId,
-          "✅ Bot menerima pesan Anda.\n\n" +
-          "Sistem Telegram sudah terhubung."
-        );
-      }
-    }
+    console.log("✅ Telegram webhook dinonaktifkan.");
 
   } catch (error) {
 
     console.error(
-      "❌ ERROR TELEGRAM:",
+      "⚠️ Gagal mengecek webhook Telegram:",
       error.response?.data || error.message
     );
   }
+
+  // Loop tunggal
+  while (true) {
+
+    try {
+
+      const url =
+        `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates`;
+
+      const response = await axios.get(
+        url,
+        {
+          params: {
+            offset: telegramOffset,
+            timeout: 25
+          },
+          timeout: 35000
+        }
+      );
+
+      const updates = response.data.result || [];
+
+      for (const update of updates) {
+
+        telegramOffset = update.update_id + 1;
+
+        if (!update.message) {
+          continue;
+        }
+
+        const message = update.message;
+        const chat = message.chat;
+
+        const chatId = chat.id;
+        const text = message.text || "";
+
+        console.log("=================================");
+        console.log("📥 PESAN TELEGRAM DITERIMA");
+        console.log("🆔 Chat ID:", chatId);
+        console.log("💬 Pesan:", text);
+        console.log("=================================");
+
+        // Simpan Chat ID terakhir
+        telegramChatId = chatId;
+
+        // ==================================================
+        // /START
+        // ==================================================
+
+        if (text === "/start") {
+
+          await sendTelegramMessage(
+            chatId,
+            "🎉 BOT BERHASIL AKTIF!\n\n" +
+            "✅ Telegram terhubung\n" +
+            "✅ Chat ID berhasil terdeteksi\n" +
+            "✅ Siap menerima pesan WhatsApp\n\n" +
+            `🆔 Chat ID Anda: ${chatId}\n\n` +
+            "Kirim /id untuk melihat Chat ID lagi."
+          );
+
+          continue;
+        }
+
+        // ==================================================
+        // /ID
+        // ==================================================
+
+        if (text === "/id") {
+
+          await sendTelegramMessage(
+            chatId,
+            `🆔 Chat ID Telegram Anda:\n\n${chatId}`
+          );
+
+          continue;
+        }
+
+        // ==================================================
+        // PESAN BIASA
+        // ==================================================
+
+        if (text) {
+
+          await sendTelegramMessage(
+            chatId,
+            "✅ Pesan Telegram diterima.\n\n" +
+            "Bot siap menerima pesan WhatsApp."
+          );
+        }
+      }
+
+    } catch (error) {
+
+      console.error(
+        "❌ ERROR TELEGRAM:",
+        error.response?.data || error.message
+      );
+
+      // Tunggu sebentar sebelum mencoba lagi
+      await new Promise(
+        resolve => setTimeout(resolve, 5000)
+      );
+    }
+  }
 }
 
-// ========================================
-// JALANKAN TELEGRAM POLLING
-// ========================================
-
-setInterval(
-  checkTelegramUpdates,
-  3000
-);
-
-// Jalankan pertama kali
-checkTelegramUpdates();
-
-// ========================================
+// ==================================================
 // WEBHOOK GREEN API
-// ========================================
+// ==================================================
 
 app.post(
   "/webhook/greenapi",
@@ -206,22 +235,23 @@ app.post(
 
       const data = req.body;
 
+      // Tampilkan data webhook di Railway
       console.log(
-        JSON.stringify(
-          data,
-          null,
-          2
-        )
+        JSON.stringify(data, null, 2)
       );
 
-      // ==================================
+      // ==================================================
       // HANYA PESAN MASUK
-      // ==================================
+      // ==================================================
 
       if (
         data.typeWebhook !==
         "incomingMessageReceived"
       ) {
+
+        console.log(
+          "ℹ️ Webhook bukan pesan masuk."
+        );
 
         return res.status(200).json({
           success: true,
@@ -234,38 +264,8 @@ app.post(
 
       if (!messageData) {
 
-        return res.status(200).json({
-          success: true,
-          ignored: true
-        });
-      }
-
-      // ==================================
-      // DATA PENGIRIM
-      // ==================================
-
-      const senderData =
-        messageData.senderData || {};
-
-      const chatId =
-        senderData.chatId || "";
-
-      const senderName =
-        senderData.senderName ||
-        "WhatsApp";
-
-      const chatName =
-        senderData.chatName ||
-        "Grup WhatsApp";
-
-      // ==================================
-      // PASTIKAN GRUP
-      // ==================================
-
-      if (!chatId.endsWith("@g.us")) {
-
         console.log(
-          "ℹ️ Pesan bukan dari grup"
+          "⚠️ messageData tidak ditemukan."
         );
 
         return res.status(200).json({
@@ -274,9 +274,45 @@ app.post(
         });
       }
 
-      // ==================================
-      // AMBIL TEKS
-      // ==================================
+      // ==================================================
+      // DATA PENGIRIM
+      // ==================================================
+
+      const senderData =
+        messageData.senderData || {};
+
+      const whatsappChatId =
+        senderData.chatId || "";
+
+      const senderName =
+        senderData.senderName ||
+        "WhatsApp";
+
+      const groupName =
+        senderData.chatName ||
+        "Grup WhatsApp";
+
+      // ==================================================
+      // PASTIKAN PESAN DARI GRUP
+      // ==================================================
+
+      if (
+        !whatsappChatId.endsWith("@g.us")
+      ) {
+
+        console.log(
+          "ℹ️ Pesan bukan berasal dari grup."
+        );
+
+        return res.status(200).json({
+          success: true,
+          ignored: true
+        });
+      }
+
+      // ==================================================
+      // AMBIL TEKS PESAN
+      // ==================================================
 
       let text = "";
 
@@ -291,14 +327,14 @@ app.post(
             ?.textMessage || "";
       }
 
-      // ==================================
-      // JIKA TIDAK ADA TEKS
-      // ==================================
+      // ==================================================
+      // PESAN SHARE / TEKS
+      // ==================================================
 
       if (!text) {
 
         console.log(
-          "ℹ️ Pesan tidak memiliki teks"
+          "ℹ️ Pesan tidak memiliki teks."
         );
 
         return res.status(200).json({
@@ -307,25 +343,28 @@ app.post(
         });
       }
 
-      // ==================================
-      // FORMAT PESAN
-      // ==================================
+      console.log("📨 PESAN WHATSAPP:");
+      console.log(text);
+
+      // ==================================================
+      // FORMAT TELEGRAM
+      // ==================================================
 
       const telegramText =
         "📢 PESAN WHATSAPP\n\n" +
-        `👥 Grup: ${chatName}\n` +
+        `👥 Grup: ${groupName}\n` +
         `👤 Pengirim: ${senderName}\n\n` +
         text;
 
-      console.log(
-        "📤 Pesan WhatsApp siap dikirim ke Telegram"
-      );
-
-      // ==================================
-      // KIRIM KE CHAT TELEGRAM TERAKHIR
-      // ==================================
+      // ==================================================
+      // KIRIM KE TELEGRAM
+      // ==================================================
 
       if (telegramChatId) {
+
+        console.log(
+          "📤 MENGIRIM PESAN WHATSAPP KE TELEGRAM..."
+        );
 
         await sendTelegramMessage(
           telegramChatId,
@@ -335,11 +374,11 @@ app.post(
       } else {
 
         console.log(
-          "⚠️ Belum ada Chat ID Telegram."
+          "⚠️ BELUM ADA CHAT ID TELEGRAM."
         );
 
         console.log(
-          "Buka bot Telegram dan tekan /start terlebih dahulu."
+          "Buka bot Telegram lalu tekan /start."
         );
       }
 
@@ -355,24 +394,11 @@ app.post(
         error.message
       );
 
+      // Tetap jawab 200 agar webhook tidak terus
+      // dianggap gagal oleh Green API.
       return res.status(200).json({
         success: false
       });
     }
-  }
-);
-
-// ========================================
-// START SERVER
-// ========================================
-
-app.listen(
-  PORT,
-  () => {
-
-    console.log("=================================");
-    console.log("🚀 SERVER BERJALAN");
-    console.log(`🌐 PORT: ${PORT}`);
-    console.log("=================================");
   }
 );
