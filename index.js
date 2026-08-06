@@ -11,6 +11,7 @@ const subscription = require("./subscription");
 const blacklist = require("./blacklist");
 const gps = require("./gps");
 const topup = require("./topup");
+const wilayah = require("./wilayah");
 
 // ======================================================
 // ENV
