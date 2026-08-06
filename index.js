@@ -1,4 +1,5 @@
 require("dotenv").config();
+require("dotenv").config();
 
 const http = require("http");
 const fs = require("fs");
@@ -8,6 +9,8 @@ const TelegramBot = require("node-telegram-bot-api");
 
 const subscription = require("./subscription");
 const blacklist = require("./blacklist");
+const gps = require("./gps");
+const topup = require("./topup");
 
 // ======================================================
 // ENV
@@ -421,11 +424,16 @@ async function showLocations(
 // TOP UP
 // ======================================================
 
-async function showTopup(
-  chatId
-) {
+async function showTopup(chatId) {
+
+  topup.startTopup(chatId);
+
   await bot.sendMessage(
     chatId,
+    topup.getTopupMessage()
+  );
+
+}
     "💳 TOP UP\n\n" +
     "Silakan transfer ke salah satu rekening berikut:\n\n" +
     "🏦 SEABANK\n" +
