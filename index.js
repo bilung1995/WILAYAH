@@ -719,7 +719,111 @@ bot.on(
   }
 );
 
-        
+// ======================================================
+// CALLBACK WILAYAH
+// ======================================================
+
+bot.on(
+  "callback_query",
+  async query => {
+
+    try {
+
+      const chatId =
+        query.message.chat.id;
+
+      const data =
+        query.data;
+
+
+      // ==============================
+      // PROVINSI
+      // ==============================
+
+      if (
+        data.startsWith("prov_")
+      ) {
+
+        const provId =
+          data.replace(
+            "prov_",
+            ""
+          );
+
+
+        await wilayah.showKabupaten(
+          bot,
+          chatId,
+          provId
+        );
+
+        return;
+      }
+
+
+
+      // ==============================
+      // KABUPATEN
+      // ==============================
+
+      if (
+        data.startsWith("kab_")
+      ) {
+
+        const kabId =
+          data.replace(
+            "kab_",
+            ""
+          );
+
+
+        await wilayah.showKecamatan(
+          bot,
+          chatId,
+          kabId
+        );
+
+        return;
+      }
+
+
+
+      // ==============================
+      // KECAMATAN
+      // ==============================
+
+      if (
+        data.startsWith("kec_")
+      ) {
+
+        const kecId =
+          data.replace(
+            "kec_",
+            ""
+          );
+
+
+        await bot.sendMessage(
+          chatId,
+          "✅ Kecamatan berhasil dipilih.\n\nWilayah Anda sudah tersimpan."
+        );
+
+
+        return;
+      }
+
+
+    } catch(error) {
+
+      console.error(
+        "❌ CALLBACK WILAYAH ERROR:",
+        error
+      );
+
+    }
+
+  }
+);        
 
 // ======================================================
 // ERROR TELEGRAM
