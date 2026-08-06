@@ -5,6 +5,8 @@ const fs = require("fs");
 const path = require("path");
 const TelegramBot = require("node-telegram-bot-api");
 
+const subscription = require("./subscribe");
+
 // ======================================================
 // ENV
 // ======================================================
