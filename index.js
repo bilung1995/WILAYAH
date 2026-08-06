@@ -598,11 +598,12 @@ async function showBlacklist(
 // ======================================================
 // PESAN MENU
 // ======================================================
-
 bot.on(
   "message",
   async message => {
+
     try {
+
       if (
         !message.text ||
         message.text.startsWith("/")
@@ -610,58 +611,71 @@ bot.on(
         return;
       }
 
+
       const chatId =
         message.chat.id;
+
 
       const text =
         message.text.trim();
 
+
       getUser(chatId);
 
+
       switch (text) {
+
         case "👤 PROFIL":
-          await showProfile(
-            chatId
-          );
+
+          await showProfile(chatId);
+
           break;
+
 
         case "📍 KOTA YANG DIPILIH":
-          await showLocations(
-            chatId
-          );
+
+          await showLocations(chatId);
+
           break;
+
 
         case "💳 TOP UP":
-          await showTopup(
-            chatId
-          );
+
+          await showTopup(chatId);
+
           break;
+
 
         case "❓ BANTUAN":
-          await showHelp(
-            chatId
-          );
+
+          await showHelp(chatId);
+
           break;
+
 
         case "👨‍💼 HUBUNGI ADMIN":
-          await showAdmin(
-            chatId
-          );
+
+          await showAdmin(chatId);
+
           break;
+
 
         case "🛠️ PANEL ADMIN":
-          await showAdminPanel(
-            chatId
-          );
+
+          await showAdminPanel(chatId);
+
           break;
+
 
         case "🚫 NOMOR BLACKLIST":
-          await showBlacklist(
-            chatId
-          );
+
+          await showBlacklist(chatId);
+
           break;
 
+
         case "📊 STATUS":
+
           await bot.sendMessage(
             chatId,
             "📊 STATUS\n\n" +
@@ -673,29 +687,39 @@ bot.on(
                 mainKeyboard()
             }
           );
+
           break;
 
-        case "🏙 TAMBAH KOTA":
 
-  await wilayah.showProvinsi(
-    bot,
-    chatId
-  );
+        case "🏙️ TAMBAH KOTA":
 
-break;
+          await wilayah.showProvinsi(
+            bot,
+            chatId
+          );
+
+          break;
+
 
         default:
+
           break;
       }
 
+
     } catch (error) {
+
       console.error(
         "❌ ERROR MESSAGE:",
         error
       );
+
     }
+
   }
 );
+
+        
 
 // ======================================================
 // ERROR TELEGRAM
