@@ -676,18 +676,14 @@ bot.on(
           );
           break;
 
-        case "🏙️ TAMBAH KOTA":
-          await bot.sendMessage(
-            chatId,
-            "🏙️ TAMBAH KOTA\n\n" +
-            "Modul pemilihan wilayah Indonesia siap digunakan.\n\n" +
-            "Provinsi → Kabupaten/Kota → Kecamatan.",
-            {
-              reply_markup:
-                mainKeyboard()
-            }
-          );
-          break;
+        case "🏙 TAMBAH KOTA":
+
+  await wilayah.showProvinsi(
+    bot,
+    chatId
+  );
+
+break;
 
         default:
           break;
