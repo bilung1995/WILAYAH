@@ -942,6 +942,150 @@ bot.on(
 
 
       // ==================================================
+// PILIH PAKET SUBSCRIPTION
+// ==================================================
+
+if (
+  data === "SUBSCRIBE_WEEK" ||
+  data === "SUBSCRIBE_MONTH" ||
+  data === "SUBSCRIBE_TWO_MONTH"
+) {
+
+  await bot.answerCallbackQuery(
+    query.id
+  );
+
+  const user =
+    getUser(chatId);
+
+  const packageId =
+    data === "SUBSCRIBE_WEEK"
+      ? "WEEK"
+      : data === "SUBSCRIBE_MONTH"
+        ? "MONTH"
+        : "TWO_MONTH";
+
+
+  const result =
+    subscription.createSubscriptionRequest(
+      user,
+      packageId
+    );
+
+
+  if (!result.success) {
+
+    await bot.sendMessage(
+      chatId,
+      result.message,
+      {
+        reply_markup:
+          mainKeyboard(chatId)
+      }
+    );
+
+    return;
+  }
+
+
+  const selectedPackage =
+    result.package;
+
+
+  await bot.sendMessage(
+
+    chatId,
+
+    "💳 PEMBAYARAN SUBSCRIPTION\n\n" +
+
+    `📦 Paket: ${selectedPackage.name}\n` +
+
+    `💰 Total: ${subscription.formatRupiah(
+      selectedPackage.price
+    )}\n\n` +
+
+    "Silakan lakukan pembayaran sesuai " +
+    "instruksi pembayaran.\n\n" +
+
+    "📸 Setelah pembayaran, kirim FOTO " +
+    "bukti transfer di chat ini.\n\n" +
+
+    "⏳ Status: MENUNGGU BUKTI PEMBAYARAN",
+
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "❌ BATALKAN",
+              callback_data:
+                "CANCEL_SUBSCRIPTION"
+            }
+          ]
+        ]
+      }
+    }
+
+  );
+
+
+  user.waitingPaymentProof =
+    true;
+
+  user.paymentProof =
+    null;
+
+  saveDatabase();
+
+  return;
+}
+
+
+// ==================================================
+// BATALKAN SUBSCRIPTION
+// ==================================================
+
+if (
+  data === "CANCEL_SUBSCRIPTION"
+) {
+
+  await bot.answerCallbackQuery(
+    query.id
+  );
+
+  const user =
+    getUser(chatId);
+
+  user.subscriptionRequest =
+    null;
+
+  user.waitingPaymentProof =
+    false;
+
+  user.paymentProof =
+    null;
+
+  saveDatabase();
+
+
+  await bot.sendMessage(
+
+    chatId,
+
+    "❌ Permintaan subscription dibatalkan.",
+
+    {
+      reply_markup:
+        mainKeyboard(chatId)
+    }
+
+  );
+
+  return;
+}
+
+
+      // ==================================================
       // PILIH PROVINSI
       // ==================================================
 
