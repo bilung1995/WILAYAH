@@ -4,6 +4,9 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const TelegramBot = require("node-telegram-bot-api");
+const wilayah = require("./wilayah");
+
+
 
 // ======================================================
 // ENV
@@ -695,33 +698,42 @@ bot.on(
       }
 
       // ==================================================
-      // TAMBAH KOTA
-      // ==================================================
+// TAMBAH KOTA
+// ==================================================
 
-      if (
-        text ===
-        "🏙️ TAMBAH KOTA"
-      ) {
+if (
+  text === "🏙️ TAMBAH KOTA"
+) {
 
-        await bot.sendMessage(
+  try {
 
-          chatId,
+    await wilayah.showProvinsi(
+      bot,
+      chatId
+    );
 
-          "🏙️ TAMBAH KOTA\n\n" +
+  } catch (error) {
 
-          "Modul pemilihan wilayah akan "
-          + "disambungkan pada bagian berikutnya.",
+    console.error(
+      "❌ ERROR TAMBAH KOTA:",
+      error
+    );
 
-          {
-            reply_markup:
-              mainKeyboard(chatId)
-          }
-
-        );
-
-        return;
+    await bot.sendMessage(
+      chatId,
+      "❌ Gagal membuka pemilihan wilayah.",
+      {
+        reply_markup:
+          mainKeyboard(chatId)
       }
+    );
 
+  }
+
+  return;
+}
+
+      
       // ==================================================
       // PANEL ADMIN
       // ==================================================
