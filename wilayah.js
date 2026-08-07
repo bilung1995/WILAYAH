@@ -182,6 +182,8 @@ function simpanWilayah(
   userWilayah[chatId] =
     wilayah;
 
+  return wilayah;
+
 }
 
 
