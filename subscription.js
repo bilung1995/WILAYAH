@@ -328,6 +328,13 @@ function activateSubscription(
     );
 
 
+  // RESET KUOTA WILAYAH
+  // Subscription baru mendapat
+  // 1 kuota wilayah baru.
+
+  user.locationQuotaUsed = false;
+
+
   user.subscription = {
 
     packageId:
