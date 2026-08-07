@@ -758,6 +758,70 @@ bot.on(
       const data =
         query.data;
 
+      // ============================
+// SUBSCRIPTION
+// ============================
+
+if (
+  data.startsWith("SUBSCRIBE_")
+) {
+
+  const packageId =
+    data.replace(
+      "SUBSCRIBE_",
+      ""
+    );
+
+
+  const user =
+    getUser(chatId);
+
+
+  const result =
+    subscription.createSubscriptionRequest(
+      user,
+      packageId
+    );
+
+
+  saveDatabase();
+
+
+  if (
+    !result.success
+  ) {
+
+    await bot.answerCallbackQuery(
+      query.id
+    );
+
+    await bot.sendMessage(
+      chatId,
+      result.message
+    );
+
+    return;
+  }
+
+
+  await bot.answerCallbackQuery(
+    query.id
+  );
+
+
+  await bot.sendMessage(
+    chatId,
+
+    "✅ Permintaan subscription dibuat.\n\n" +
+    `📦 Paket: ${result.package.name}\n` +
+    `💰 Harga: ${subscription.formatRupiah(result.package.price)}\n\n` +
+    "Silakan lakukan pembayaran lalu kirim bukti transfer."
+  );
+
+
+  return;
+}
+
 
       // ============================
       // PILIH PROVINSI
