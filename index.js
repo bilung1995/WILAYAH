@@ -877,6 +877,242 @@ if (
   }
 );
 
+
+// ======================================================
+// CALLBACK QUERY
+// ======================================================
+
+bot.on(
+  "callback_query",
+  async query => {
+
+    try {
+
+      const chatId =
+        query.message?.chat?.id;
+
+      const data =
+        query.data || "";
+
+      if (!chatId || !data) {
+        return;
+      }
+
+      console.log(
+        "🔘 CALLBACK:",
+        data,
+        "USER:",
+        chatId
+      );
+
+
+      // ==================================================
+      // PILIH PROVINSI
+      // ==================================================
+
+      if (
+        data.startsWith("prov_")
+      ) {
+
+        await bot.answerCallbackQuery(
+          query.id
+        );
+
+        const provData =
+          data.substring(5);
+
+        console.log(
+          "🇮🇩 PROVINSI DIPILIH:",
+          provData
+        );
+
+        await wilayah.showKabupaten(
+          bot,
+          chatId,
+          provData
+        );
+
+        return;
+      }
+
+
+      // ==================================================
+      // PILIH KABUPATEN / KOTA
+      // ==================================================
+
+      if (
+        data.startsWith("kab_")
+      ) {
+
+        await bot.answerCallbackQuery(
+          query.id
+        );
+
+        const kabData =
+          data.substring(4);
+
+        console.log(
+          "🏙️ KABUPATEN/KOTA DIPILIH:",
+          kabData
+        );
+
+        await wilayah.showKecamatan(
+          bot,
+          chatId,
+          kabData
+        );
+
+        return;
+      }
+
+
+      // ==================================================
+      // PILIH KECAMATAN
+      // ==================================================
+
+      if (
+        data.startsWith("kec_")
+      ) {
+
+        await bot.answerCallbackQuery(
+          query.id
+        );
+
+        const kecData =
+          data.substring(4);
+
+        const parts =
+          kecData.split("|");
+
+        const kecId =
+          parts[0] || "";
+
+        const provinsi =
+          parts[1] || "";
+
+        const kabupaten =
+          parts[2] || "";
+
+        const kecamatan =
+          parts[3] || "";
+
+        console.log(
+          "📍 KECAMATAN DIPILIH:",
+          {
+            kecId,
+            provinsi,
+            kabupaten,
+            kecamatan
+          }
+        );
+
+
+        if (!kecId) {
+
+          await bot.sendMessage(
+            chatId,
+            "❌ Data kecamatan tidak valid."
+          );
+
+          return;
+        }
+
+
+        const saved =
+          saveUserLocation(
+            chatId,
+            {
+              provinsi,
+              kabupaten,
+              kecamatan,
+              kecamatanCode:
+                kecId
+            }
+          );
+
+
+        if (!saved) {
+
+          await bot.sendMessage(
+
+            chatId,
+
+            "ℹ️ Wilayah tersebut sudah tersimpan.",
+
+            {
+              reply_markup:
+                mainKeyboard(chatId)
+            }
+
+          );
+
+          return;
+        }
+
+
+        await bot.sendMessage(
+
+          chatId,
+
+          "✅ WILAYAH BERHASIL DISIMPAN\n\n" +
+
+          `🇮🇩 Provinsi: ${provinsi}\n` +
+
+          `🏙️ Kabupaten/Kota: ${kabupaten}\n` +
+
+          `📍 Kecamatan: ${kecamatan}\n\n` +
+
+          "Wilayah sudah tersimpan di akun Anda.",
+
+          {
+            reply_markup:
+              mainKeyboard(chatId)
+          }
+
+        );
+
+        return;
+      }
+
+
+      // ==================================================
+      // CALLBACK TIDAK DIKENAL
+      // ==================================================
+
+      await bot.answerCallbackQuery(
+        query.id,
+        {
+          text:
+            "⚠️ Tombol tidak dikenali.",
+          show_alert: false
+        }
+      );
+
+    } catch (error) {
+
+      console.error(
+        "❌ ERROR CALLBACK QUERY:",
+        error
+      );
+
+      try {
+
+        await bot.answerCallbackQuery(
+          query.id,
+          {
+            text:
+              "❌ Terjadi kesalahan.",
+            show_alert: true
+          }
+        );
+
+      } catch (_) {}
+
+    }
+
+  }
+);
+
 // ======================================================
 // TELEGRAM ERROR
 // ======================================================
