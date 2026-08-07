@@ -693,12 +693,35 @@ bot.on(
 
         case "🏙️ TAMBAH KOTA":
 
-          await wilayah.showProvinsi(
-            bot,
-            chatId
-          );
+  const user =
+    getUser(chatId);
 
-          break;
+
+  if (
+    !subscription.hasActiveSubscription(
+      user
+    )
+  ) {
+
+    await bot.sendMessage(
+      chatId,
+      subscription.getSubscriptionMessage(),
+      {
+        reply_markup:
+          subscription.getSubscriptionKeyboard()
+      }
+    );
+
+    break;
+  }
+
+
+  await wilayah.showProvinsi(
+    bot,
+    chatId
+  );
+
+break;
 
 
         default:
