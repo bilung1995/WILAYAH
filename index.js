@@ -756,8 +756,12 @@ bot.on(
         query.message.chat.id;
 
       const data =
-        query.data;
+  query.data;
 
+console.log(
+  "DATA KLIK:",
+  data
+);
       // ============================
 // ADMIN APPROVE / REJECT
 // ============================
