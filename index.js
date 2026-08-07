@@ -2169,37 +2169,224 @@ async function handleWhatsAppWebhook(
 // HTTP SERVER
 // ======================================================
 
-const server =
-  http.createServer(
-    async (
-      req,
-      res
-    ) => {
+const server = http.createServer(
+  async (req, res) => {
 
-      try {
+    try {
 
-        // ==============================================
-        // HEALTH CHECK
-        // ==============================================
+      // ==============================================
+      // HEALTH CHECK
+      // ==============================================
 
-        if (
-          req.method === "GET" &&
-          req.url === "/"
-        ) {
+      if (
+        req.method === "GET" &&
+        req.url === "/"
+      ) {
 
-          res.writeHead(
-            200,
-            {
-              "Content-Type":
-                "text/plain; charset=utf-8"
+        res.writeHead(
+          200,
+          {
+            "Content-Type":
+              "text/plain; charset=utf-8"
+          }
+        );
+
+        res.end(
+          "🤖 Bot Telegram aktif"
+        );
+
+        return;
+      }
+
+
+      // ==============================================
+      // HEALTH
+      // ==============================================
+
+      if (
+        req.method === "GET" &&
+        req.url === "/health"
+      ) {
+
+        res.writeHead(
+          200,
+          {
+            "Content-Type":
+              "application/json"
+          }
+        );
+
+        res.end(
+          JSON.stringify({
+            status: "ok",
+            telegram: "active"
+          })
+        );
+
+        return;
+      }
+
+
+      // ==============================================
+      // WEBHOOK WHATSAPP
+      // ==============================================
+
+      if (
+        req.method === "POST" &&
+        req.url === "/webhook"
+      ) {
+
+        let body = "";
+
+        req.on(
+          "data",
+          chunk => {
+            body += chunk.toString();
+          }
+        );
+
+        req.on(
+          "end",
+          async () => {
+
+            try {
+
+              const json =
+                JSON.parse(
+                  body || "{}"
+                );
+
+              await handleWhatsAppWebhook(
+                json
+              );
+
+              res.writeHead(
+                200,
+                {
+                  "Content-Type":
+                    "application/json"
+                }
+              );
+
+              res.end(
+                JSON.stringify({
+                  success: true
+                })
+              );
+
+            } catch (error) {
+
+              console.error(
+                "❌ WEBHOOK ERROR:",
+                error
+              );
+
+              res.writeHead(
+                400,
+                {
+                  "Content-Type":
+                    "application/json"
+                }
+              );
+
+              res.end(
+                JSON.stringify({
+                  success: false,
+                  error:
+                    error.message
+                })
+              );
             }
-          );
+          }
+        );
 
-          res.end(
-            "🤖 Bot Telegram aktif"
-          );
-
-          return;
+        return;
+      }
 
 
-        
+      // ==============================================
+      // 404
+      // ==============================================
+
+      res.writeHead(
+        404,
+        {
+          "Content-Type":
+            "text/plain; charset=utf-8"
+        }
+      );
+
+      res.end(
+        "404 Not Found"
+      );
+
+    } catch (error) {
+
+      console.error(
+        "❌ HTTP SERVER ERROR:",
+        error
+      );
+
+      res.writeHead(
+        500,
+        {
+          "Content-Type":
+            "text/plain; charset=utf-8"
+        }
+      );
+
+      res.end(
+        "Internal Server Error"
+      );
+    }
+  }
+);
+
+
+// ======================================================
+// JALANKAN SERVER
+// ======================================================
+
+server.listen(
+  PORT,
+  () => {
+
+    console.log(
+      "======================================"
+    );
+
+    console.log(
+      `🌐 HTTP SERVER: PORT ${PORT}`
+    );
+
+    console.log(
+      "🌐 HEALTH: /health"
+    );
+
+    console.log(
+      "🌐 WEBHOOK: /webhook"
+    );
+
+    console.log(
+      "======================================"
+    );
+
+  }
+);
+
+
+// ======================================================
+// BOT SELESAI
+// ======================================================
+
+console.log(
+  "======================================"
+);
+
+console.log(
+  "🤖 BOT TELEGRAM SIAP DIGUNAKAN"
+);
+
+console.log(
+  "======================================"
+);
