@@ -979,82 +979,87 @@ bot.on(
       // ==================================================
 
       if (
-        text ===
-        "🏙️ TAMBAH KOTA"
-      ) {
+  text ===
+  "🏙️ TAMBAH KOTA"
+) {
 
-        // Cek subscription
-        if (
-          !subscription.hasActiveSubscription(
-            user
-          )
-        ) {
+  // ==================================================
+  // CEK SUBSCRIPTION
+  // ==================================================
 
-          await bot.sendMessage(
+  if (
+    !subscription.hasActiveSubscription(
+      user
+    )
+  ) {
 
-            chatId,
+    await bot.sendMessage(
 
-            subscription.getSubscriptionMessage(),
+      chatId,
 
-            {
-              reply_markup:
-                subscription.getSubscriptionKeyboard()
-            }
+      subscription.getSubscriptionMessage(),
 
-          );
-
-          return;
-        }
-
-
-        // Jika subscription aktif,
-        // tampilkan provinsi
-
-        await wilayah.showProvinsi(
-          bot,
-          chatId
-        );
-
-        return;
+      {
+        reply_markup:
+          subscription.getSubscriptionKeyboard()
       }
 
-    } catch (error) {
+    );
 
-      console.error(
-        "❌ ERROR MENU UTAMA:",
-        error
-      );
-
-      try {
-
-        await bot.sendMessage(
-
-          message.chat.id,
-
-          "❌ Terjadi kesalahan.\n\n" +
-          "Silakan coba lagi.",
-
-          {
-            reply_markup:
-              mainKeyboard()
-          }
-
-        );
-
-      } catch (sendError) {
-
-        console.error(
-          "❌ GAGAL KIRIM ERROR:",
-          sendError.message
-        );
-
-      }
-
-    }
-
+    return;
   }
-);
 
+
+  // ==================================================
+  // CEK KUOTA WILAYAH
+  // ==================================================
+
+  // Setiap TOP UP yang disetujui
+  // memberikan 2 kuota wilayah.
+
+  const quota =
+    Number(
+      user.locationQuota || 0
+    );
+
+
+  if (
+    quota <= 0
+  ) {
+
+    await bot.sendMessage(
+
+      chatId,
+
+      "⚠️ KUOTA WILAYAH HABIS\n\n" +
+
+      "Anda sudah menggunakan seluruh kuota wilayah.\n\n" +
+
+      "💳 Silakan TOP UP terlebih dahulu " +
+      "untuk mendapatkan 2 kuota wilayah lagi.",
+
+      {
+        reply_markup:
+          mainKeyboard()
+      }
+
+    );
+
+    return;
+  }
+
+
+  // ==================================================
+  // SUBSCRIPTION AKTIF + KUOTA MASIH ADA
+  // ==================================================
+
+  await wilayah.showProvinsi(
+    bot,
+    chatId
+  );
+
+  return;
+      }
 
 // ======================================================
 // CALLBACK QUERY
@@ -1552,121 +1557,155 @@ bot.on(
       // ======================================================
 
       if (
-        data.startsWith("kec_")
-      ) {
+  data.startsWith("kec_")
+) {
 
-        const kecData =
-          data.replace(
-            "kec_",
-            ""
-          );
+  const kecData =
+    data.replace(
+      "kec_",
+      ""
+    );
 
-        const parts =
-          kecData.split("|");
+  const parts =
+    kecData.split("|");
 
-        const kecId =
-          parts[0] || "";
+  const kecId =
+    parts[0] || "";
 
-        const provinsi =
-          parts[1] || "";
+  const provinsi =
+    parts[1] || "";
 
-        const kabupaten =
-          parts[2] || "";
+  const kabupaten =
+    parts[2] || "";
 
-        const kecamatan =
-          parts[3] || "";
+  const kecamatan =
+    parts[3] || "";
 
-        console.log(
-          "📍 KECAMATAN DIPILIH:",
-          {
-            kecId,
-            provinsi,
-            kabupaten,
-            kecamatan
-          }
-        );
+  console.log(
+    "📍 KECAMATAN DIPILIH:",
+    {
+      kecId,
+      provinsi,
+      kabupaten,
+      kecamatan
+    }
+  );
 
-        if (!kecId) {
 
-          await bot.answerCallbackQuery(
-            query.id,
-            {
-              text:
-                "❌ Kecamatan tidak valid.",
-              show_alert: true
-            }
-          );
+  // ==================================================
+  // CEK KECAMATAN VALID
+  // ==================================================
 
-          return;
-        }
+  if (!kecId) {
 
-        saveUserLocation(
-          chatId,
-          {
-            provinsi,
-            kabupaten,
-            kecamatan,
-            kecamatanCode:
-              kecId
-          }
-        );
-
-        await bot.answerCallbackQuery(
-          query.id,
-          {
-            text:
-              "✅ Wilayah berhasil disimpan."
-          }
-        );
-
-        await bot.sendMessage(
-
-          chatId,
-
-          "✅ WILAYAH BERHASIL DISIMPAN\n\n" +
-
-          `🇮🇩 Provinsi: ${provinsi}\n` +
-
-          `🏙️ Kabupaten/Kota: ${kabupaten}\n` +
-
-          `📍 Kecamatan: ${kecamatan}\n\n` +
-
-          "Wilayah sudah tersimpan di akun Anda.",
-
-          {
-            reply_markup:
-              mainKeyboard()
-          }
-
-        );
-
-        return;
+    await bot.answerCallbackQuery(
+      query.id,
+      {
+        text:
+          "❌ Kecamatan tidak valid.",
+        show_alert: true
       }
+    );
 
-    } catch (error) {
+    return;
+  }
 
-      console.error(
-        "❌ ERROR CALLBACK QUERY:",
-        error
-      );
 
-      try {
+  // ==================================================
+  // CEK KUOTA WILAYAH
+  // ==================================================
 
-        await bot.answerCallbackQuery(
-          query.id,
-          {
-            text:
-              "❌ Terjadi kesalahan.",
-            show_alert: true
-          }
-        );
+  const currentQuota =
+    Number(
+      user.locationQuota || 0
+    );
 
-      } catch (_) {}
 
+  if (
+    currentQuota <= 0
+  ) {
+
+    await bot.answerCallbackQuery(
+      query.id,
+      {
+        text:
+          "⚠️ Kuota wilayah habis. Silakan TOP UP terlebih dahulu.",
+        show_alert: true
+      }
+    );
+
+    return;
+  }
+
+
+  // ==================================================
+  // SIMPAN WILAYAH
+  // ==================================================
+
+  saveUserLocation(
+    chatId,
+    {
+      provinsi,
+      kabupaten,
+      kecamatan,
+      kecamatanCode:
+        kecId
+    }
+  );
+
+
+  // ==================================================
+  // KURANGI 1 KUOTA
+  // ==================================================
+
+  user.locationQuota =
+    currentQuota - 1;
+
+
+  console.log(
+    "📊 SISA KUOTA WILAYAH:",
+    user.locationQuota
+  );
+
+
+  // ==================================================
+  // HASIL
+  // ==================================================
+
+  await bot.answerCallbackQuery(
+    query.id,
+    {
+      text:
+        "✅ Wilayah berhasil disimpan."
+    }
+  );
+
+
+  await bot.sendMessage(
+
+    chatId,
+
+    "✅ WILAYAH BERHASIL DISIMPAN\n\n" +
+
+    `🇮🇩 Provinsi: ${provinsi}\n` +
+
+    `🏙️ Kabupaten/Kota: ${kabupaten}\n` +
+
+    `📍 Kecamatan: ${kecamatan}\n\n` +
+
+    `🎟️ Sisa kuota wilayah: ${user.locationQuota}\n\n` +
+
+    "Wilayah sudah tersimpan di akun Anda.",
+
+    {
+      reply_markup:
+        mainKeyboard()
     }
 
-  }
-);
+  );
+
+  return;
+      }
 
 
 // ======================================================
