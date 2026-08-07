@@ -792,47 +792,40 @@ bot.on(
       // ==========================
 
       if (
-        data.startsWith("kec_")
-      ) {
+  data.startsWith("kec_")
+) {
 
-        const kecId =
-          data.replace(
-            "kec_",
-            ""
-          );
-
-
-        wilayah.simpanWilayah(
-          chatId,
-          {
-            kecamatanCode:
-              kecId
-          }
-        );
+  const kecId =
+    data.replace(
+      "kec_",
+      ""
+    );
 
 
-        await bot.sendMessage(
-          chatId,
-          "✅ Kecamatan berhasil dipilih.\n\n" +
-          "Wilayah sudah tersimpan."
-        );
-
-
-        return;
-      }
-
-
-    } catch(error) {
-
-      console.error(
-        "❌ CALLBACK ERROR:",
-        error
-      );
-
+  saveUserLocation(
+    chatId,
+    {
+      provinsi:
+        "Indonesia",
+      kabupaten:
+        "Kabupaten/Kota dipilih",
+      kecamatan:
+        "Kecamatan dipilih",
+      kecamatanCode:
+        kecId
     }
+  );
 
-  }
-);
+
+  await bot.sendMessage(
+    chatId,
+    "✅ Kecamatan berhasil dipilih.\n\n" +
+    "Wilayah sudah tersimpan."
+  );
+
+
+  return;
+      }
 
           
 
