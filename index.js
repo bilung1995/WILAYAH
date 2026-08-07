@@ -192,9 +192,11 @@ function getUser(chatId) {
       balance: 0,
 
       subscription: null,
-      subscriptionRequest: null,
+subscriptionRequest: null,
 
-      waitingPaymentProof: false,
+locationQuotaUsed: false,
+
+waitingPaymentProof: false,
       paymentProof: null,
 
       createdAt:
@@ -1135,11 +1137,13 @@ if (text === "💳 TOP UP") {
 
 
 // ==================================================
+// ==================================================
 // TAMBAH KOTA
 // ==================================================
 
 if (text === "🏙️ TAMBAH KOTA") {
 
+  // CEK SUBSCRIPTION AKTIF
   if (
     !subscription.hasActiveSubscription(user)
   ) {
@@ -1161,6 +1165,31 @@ if (text === "🏙️ TAMBAH KOTA") {
     return;
   }
 
+
+  // CEK KUOTA WILAYAH
+  if (
+    user.locationQuotaUsed === true
+  ) {
+
+    await bot.sendMessage(
+
+      chatId,
+
+      "🔒 KUOTA WILAYAH SUDAH DIGUNAKAN\n\n" +
+
+      "Subscription Anda sudah digunakan " +
+      "untuk memilih 1 wilayah.\n\n" +
+
+      "💳 Untuk menambahkan kota/kecamatan lagi, " +
+      "silakan lakukan TOP UP dan pilih paket baru."
+
+    );
+
+    return;
+  }
+
+
+  // BUKA PEMILIHAN WILAYAH
   try {
 
     await wilayah.showProvinsi(
@@ -1187,7 +1216,6 @@ if (text === "🏙️ TAMBAH KOTA") {
 
   return;
 }
-
 
 // ==================================================
 // PANEL ADMIN
@@ -1645,7 +1673,11 @@ bot.on(
           return;
         }
 
-        await bot.sendMessage(
+user.locationQuotaUsed = true;
+
+saveDatabase();
+
+await bot.sendMessage(
 
           chatId,
 
