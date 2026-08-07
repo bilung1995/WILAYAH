@@ -914,6 +914,7 @@ if (
 
 
 // ======================================================
+// ======================================================
 // CALLBACK QUERY
 // ======================================================
 
@@ -940,6 +941,782 @@ bot.on(
         chatId
       );
 
+
+      // ==================================================
+      // ADMIN APPROVE / REJECT
+      // ==================================================
+
+      if (
+        data.startsWith("APPROVE_") ||
+        data.startsWith("REJECT_")
+      ) {
+
+        if (
+          !ADMIN_ID ||
+          String(chatId) !==
+            String(ADMIN_ID)
+        ) {
+
+          await bot.answerCallbackQuery(
+            query.id,
+            {
+              text:
+                "⛔ Anda bukan admin.",
+              show_alert: true
+            }
+          );
+
+          return;
+        }
+
+
+        const userId =
+          data
+            .replace(
+              "APPROVE_",
+              ""
+            )
+            .replace(
+              "REJECT_",
+              ""
+            );
+
+
+        const user =
+          getUser(userId);
+
+
+        if (!user) {
+
+          await bot.answerCallbackQuery(
+            query.id,
+            {
+              text:
+                "❌ User tidak ditemukan.",
+              show_alert: true
+            }
+          );
+
+          return;
+        }
+
+
+        // ==================================================
+        // APPROVE
+        // ==================================================
+
+        if (
+          data.startsWith("APPROVE_")
+        ) {
+
+          if (
+            !user.subscriptionRequest
+          ) {
+
+            await bot.answerCallbackQuery(
+              query.id,
+              {
+                text:
+                  "❌ Permintaan subscription tidak ditemukan.",
+                show_alert: true
+              }
+            );
+
+            return;
+          }
+
+
+          const packageId =
+            user.subscriptionRequest.packageId;
+
+
+          const result =
+            subscription.activateSubscription(
+              user,
+              packageId
+            );
+
+
+          if (!result.success) {
+
+            await bot.answerCallbackQuery(
+              query.id,
+              {
+                text:
+                  result.message ||
+                  "❌ Gagal mengaktifkan subscription.",
+                show_alert: true
+              }
+            );
+
+            return;
+          }
+
+
+          user.waitingPaymentProof =
+            false;
+
+          user.paymentProof =
+            null;
+
+          saveDatabase();
+
+
+          await bot.answerCallbackQuery(
+            query.id,
+            {
+              text:
+                "✅ Subscription diaktifkan."
+            }
+          );
+
+
+          await bot.sendMessage(
+
+            userId,
+
+            "🎉 PEMBAYARAN DITERIMA!\n\n" +
+
+            "✅ Subscription Anda sudah aktif.\n\n" +
+
+            subscription.getSubscriptionInfo(
+              user
+            ),
+
+            {
+              reply_markup:
+                mainKeyboard()
+            }
+
+          );
+
+
+          await bot.sendMessage(
+
+            chatId,
+
+            "✅ SUBSCRIPTION USER BERHASIL DIAKTIFKAN\n\n" +
+
+            `👤 User ID: ${userId}\n` +
+
+            `📦 Paket: ${
+              result.subscription.packageName
+            }`
+
+          );
+
+          return;
+        }
+
+
+        // ==================================================
+        // REJECT
+        // ==================================================
+
+        if (
+          data.startsWith("REJECT_")
+        ) {
+
+          user.subscriptionRequest =
+            null;
+
+          user.waitingPaymentProof =
+            false;
+
+          user.paymentProof =
+            null;
+
+          saveDatabase();
+
+
+          await bot.answerCallbackQuery(
+            query.id,
+            {
+              text:
+                "❌ Pembayaran ditolak."
+            }
+          );
+
+
+          await bot.sendMessage(
+
+            userId,
+
+            "❌ PEMBAYARAN DITOLAK\n\n" +
+
+            "Bukti pembayaran Anda ditolak oleh admin.\n\n" +
+
+            "Silakan lakukan pembayaran kembali jika ingin berlangganan.",
+
+            {
+              reply_markup:
+                mainKeyboard()
+            }
+
+          );
+
+
+          await bot.sendMessage(
+
+            chatId,
+
+            "❌ PEMBAYARAN USER DITOLAK\n\n" +
+
+            `👤 User ID: ${userId}`
+
+          );
+
+          return;
+        }
+
+      }
+
+
+      // ==================================================
+      // SUBSCRIPTION
+      // ==================================================
+
+      if (
+        data === "SUBSCRIBE_WEEK" ||
+        data === "SUBSCRIBE_MONTH" ||
+        data === "SUBSCRIBE_TWO_MONTH"
+      ) {
+
+        const user =
+          getUser(chatId);
+
+
+        const packageId =
+          data === "SUBSCRIBE_WEEK"
+            ? "WEEK"
+            : data === "SUBSCRIBE_MONTH"
+              ? "MONTH"
+              : "TWO_MONTH";
+
+
+        const result =
+          subscription.createSubscriptionRequest(
+            user,
+            packageId
+          );
+
+
+        if (!result.success) {
+
+          await bot.answerCallbackQuery(
+            query.id,
+            {
+              text:
+                result.message ||
+                "❌ Gagal membuat permintaan.",
+              show_alert: true
+            }
+          );
+
+          return;
+        }
+
+
+        user.waitingPaymentProof =
+          true;
+
+        saveDatabase();
+
+
+        await bot.answerCallbackQuery(
+          query.id
+        );
+
+
+        await bot.sendMessage(
+
+          chatId,
+
+          "💳 PEMBAYARAN SUBSCRIPTION\n\n" +
+
+          `📦 Paket: ${
+            result.package.name
+          }\n` +
+
+          `💰 Harga: ${
+            subscription.formatRupiah(
+              result.package.price
+            )
+          }\n` +
+
+          `⏳ Masa aktif: ${
+            result.package.durationDays
+          } hari\n\n` +
+
+          "Silakan lakukan pembayaran.\n\n" +
+
+          "📸 Setelah pembayaran selesai, " +
+          "kirim FOTO bukti transfer di chat ini.\n\n" +
+
+          "⏳ Bukti pembayaran akan dikirim ke admin untuk diperiksa.",
+
+          {
+            reply_markup:
+              mainKeyboard()
+          }
+
+        );
+
+        return;
+      }
+
+
+      // ==================================================
+      // PILIH PROVINSI
+      // ==================================================
+
+      if (
+        data.startsWith("prov_")
+      ) {
+
+        await bot.answerCallbackQuery(
+          query.id
+        );
+
+        const provData =
+          data.substring(5);
+
+        console.log(
+          "🇮🇩 PROVINSI DIPILIH:",
+          provData
+        );
+
+        await wilayah.showKabupaten(
+          bot,
+          chatId,
+          provData
+        );
+
+        return;
+      }
+
+
+      // ==================================================
+      // PILIH KABUPATEN / KOTA
+      // ==================================================
+
+      if (
+        data.startsWith("kab_")
+      ) {
+
+        await bot.answerCallbackQuery(
+          query.id
+        );
+
+        const kabData =
+          data.substring(4);
+
+        console.log(
+          "🏙️ KABUPATEN/KOTA DIPILIH:",
+          kabData
+        );
+
+        await wilayah.showKecamatan(
+          bot,
+          chatId,
+          kabData
+        );
+
+        return;
+      }
+
+
+      // ==================================================
+      // PILIH KECAMATAN
+      // ==================================================
+
+      if (
+        data.startsWith("kec_")
+      ) {
+
+        await bot.answerCallbackQuery(
+          query.id
+        );
+
+        const kecData =
+          data.substring(4);
+
+        const parts =
+          kecData.split("|");
+
+        const kecId =
+          parts[0] || "";
+
+        const provinsi =
+          parts[1] || "";
+
+        const kabupaten =
+          parts[2] || "";
+
+        const kecamatan =
+          parts[3] || "";
+
+
+        if (!kecId) {
+
+          await bot.sendMessage(
+            chatId,
+            "❌ Data kecamatan tidak valid."
+          );
+
+          return;
+        }
+
+
+        const saved =
+          saveUserLocation(
+
+            chatId,
+
+            {
+              provinsi,
+              kabupaten,
+              kecamatan,
+              kecamatanCode:
+                kecId
+            }
+
+          );
+
+
+        if (!saved) {
+
+          await bot.sendMessage(
+
+            chatId,
+
+            "ℹ️ Wilayah tersebut sudah tersimpan.",
+
+            {
+              reply_markup:
+                mainKeyboard()
+            }
+
+          );
+
+          return;
+        }
+
+
+        await bot.sendMessage(
+
+          chatId,
+
+          "✅ WILAYAH BERHASIL DISIMPAN\n\n" +
+
+          `🇮🇩 Provinsi: ${provinsi}\n` +
+
+          `🏙️ Kabupaten/Kota: ${kabupaten}\n` +
+
+          `📍 Kecamatan: ${kecamatan}\n\n` +
+
+          "Wilayah sudah tersimpan di akun Anda.",
+
+          {
+            reply_markup:
+              mainKeyboard()
+          }
+
+        );
+
+        return;
+      }
+
+
+      // ==================================================
+      // CALLBACK TIDAK DIKENAL
+      // ==================================================
+
+      await bot.answerCallbackQuery(
+
+        query.id,
+
+        {
+          text:
+            "⚠️ Tombol tidak dikenali.",
+          show_alert: false
+        }
+
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "❌ ERROR CALLBACK QUERY:",
+        error
+      );
+
+
+      try {
+
+        await bot.answerCallbackQuery(
+
+          query.id,
+
+          {
+            text:
+              "❌ Terjadi kesalahan.",
+            show_alert: true
+          }
+
+        );
+
+      } catch (_) {}
+
+    }
+
+  }
+);
+
+
+// ======================================================
+// FOTO BUKTI PEMBAYARAN SUBSCRIPTION
+// ======================================================
+
+bot.on(
+  "photo",
+  async message => {
+
+    try {
+
+      const chatId =
+        message.chat.id;
+
+      const user =
+        getUser(chatId);
+
+
+      // ==================================================
+      // CEK MENUNGGU BUKTI
+      // ==================================================
+
+      if (
+        !user.waitingPaymentProof
+      ) {
+
+        return;
+      }
+
+
+      // ==================================================
+      // CEK PERMINTAAN SUBSCRIPTION
+      // ==================================================
+
+      if (
+        !user.subscriptionRequest
+      ) {
+
+        user.waitingPaymentProof =
+          false;
+
+        saveDatabase();
+
+
+        await bot.sendMessage(
+
+          chatId,
+
+          "❌ Tidak ada permintaan subscription yang sedang diproses.",
+
+          {
+            reply_markup:
+              mainKeyboard()
+          }
+
+        );
+
+        return;
+      }
+
+
+      // ==================================================
+      // AMBIL FOTO TERBESAR
+      // ==================================================
+
+      const photo =
+        message.photo[
+          message.photo.length - 1
+        ];
+
+      const photoId =
+        photo.file_id;
+
+
+      // ==================================================
+      // SIMPAN BUKTI
+      // ==================================================
+
+      user.paymentProof =
+        photoId;
+
+      user.waitingPaymentProof =
+        false;
+
+      saveDatabase();
+
+
+      // ==================================================
+      // BALAS KE USER
+      // ==================================================
+
+      await bot.sendMessage(
+
+        chatId,
+
+        "✅ BUKTI PEMBAYARAN DITERIMA\n\n" +
+
+        "📸 Bukti transfer sudah diterima.\n\n" +
+
+        "⏳ Sekarang menunggu pemeriksaan dan persetujuan admin.",
+
+        {
+          reply_markup:
+            mainKeyboard()
+        }
+
+      );
+
+
+      // ==================================================
+      // CEK ADMIN
+      // ==================================================
+
+      if (!ADMIN_ID) {
+
+        console.error(
+          "❌ ADMIN_ID belum diatur di .env"
+        );
+
+        return;
+      }
+
+
+      // ==================================================
+      // DATA PEMBAYARAN
+      // ==================================================
+
+      const request =
+        user.subscriptionRequest;
+
+      const harga =
+        Number(
+          request.price || 0
+        );
+
+
+      // ==================================================
+      // KIRIM FOTO KE ADMIN
+      // ==================================================
+
+      await bot.sendPhoto(
+
+        ADMIN_ID,
+
+        photoId,
+
+        {
+
+          caption:
+
+            "🔔 PEMBAYARAN SUBSCRIPTION MASUK\n\n" +
+
+            `👤 User ID: ${chatId}\n` +
+
+            `👤 Nama: ${
+              user.firstName || "-"
+            }\n` +
+
+            `🔗 Username: ${
+              user.username
+                ? "@" + user.username
+                : "-"
+            }\n\n` +
+
+            `📦 Paket: ${
+              request.packageName
+            }\n` +
+
+            `💰 Harga: Rp ${
+              harga.toLocaleString(
+                "id-ID"
+              )
+            }\n` +
+
+            `⏳ Durasi: ${
+              request.durationDays
+            } hari\n\n` +
+
+            "👇 Silakan periksa bukti pembayaran.",
+
+
+          reply_markup: {
+
+            inline_keyboard: [
+
+              [
+
+                {
+                  text:
+                    "✅ SETUJUI",
+
+                  callback_data:
+                    `APPROVE_${chatId}`
+                },
+
+                {
+                  text:
+                    "❌ TOLAK",
+
+                  callback_data:
+                    `REJECT_${chatId}`
+                }
+
+              ]
+
+            ]
+
+          }
+
+        }
+
+      );
+
+
+      console.log(
+        `💳 Bukti pembayaran dari ${chatId} dikirim ke admin.`
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "❌ ERROR FOTO PEMBAYARAN:",
+        error
+      );
+
+
+      try {
+
+        await bot.sendMessage(
+
+          message.chat.id,
+
+          "❌ Terjadi kesalahan saat menerima bukti pembayaran."
+
+        );
+
+      } catch (_) {}
+
+    }
+
+  }
+);
 
       // ==================================================
 // PILIH PAKET SUBSCRIPTION
