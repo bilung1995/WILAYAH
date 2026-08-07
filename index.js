@@ -810,20 +810,200 @@ bot.on(
       }
 
       // ==================================================
-      // FOTO
       // ==================================================
-      //
-      // Foto akan diproses nanti di BAGIAN 7.
-      // Jangan return di sini jika ada foto.
-      //
+// FOTO BUKTI PEMBAYARAN
+// ==================================================
 
-      if (
-        message.photo &&
-        message.photo.length > 0
-      ) {
+if (
+  message.photo &&
+  message.photo.length > 0
+) {
 
-        return;
+  if (
+    !user.subscriptionRequest
+  ) {
+
+    await bot.sendMessage(
+      chatId,
+      "⚠️ Belum ada permintaan subscription."
+    );
+
+    return;
+  }
+
+
+  if (
+    !user.waitingPaymentProof
+  ) {
+
+    await bot.sendMessage(
+      chatId,
+      "⚠️ Bot belum menunggu bukti pembayaran."
+    );
+
+    return;
+  }
+
+
+  const photos =
+    message.photo;
+
+  const photo =
+    photos[photos.length - 1];
+
+  const photoId =
+    photo.file_id;
+
+  const request =
+    user.subscriptionRequest;
+
+
+  // ==================================================
+  // SIMPAN BUKTI
+  // ==================================================
+
+  user.paymentProof = {
+
+    fileId:
+      photoId,
+
+    messageId:
+      message.message_id,
+
+    receivedAt:
+      new Date().toISOString()
+
+  };
+
+  user.waitingPaymentProof =
+    false;
+
+  saveDatabase();
+
+
+  // ==================================================
+  // KONFIRMASI USER
+  // ==================================================
+
+  await bot.sendMessage(
+
+    chatId,
+
+    "✅ BUKTI PEMBAYARAN DITERIMA\n\n" +
+
+    `📦 Paket: ${
+      request.packageName
+    }\n` +
+
+    `💰 Total: ${
+      subscription.formatRupiah(
+        request.price
+      )
+    }\n\n` +
+
+    "⏳ Bukti pembayaran sedang diperiksa admin.\n" +
+    "Mohon tunggu persetujuan."
+
+  );
+
+
+  // ==================================================
+  // CEK ADMIN
+  // ==================================================
+
+  if (!ADMIN_ID) {
+
+    console.error(
+      "❌ ADMIN_ID belum diatur."
+    );
+
+    return;
+  }
+
+
+  // ==================================================
+  // KIRIM FOTO KE ADMIN
+  // ==================================================
+
+  await bot.sendPhoto(
+
+    ADMIN_ID,
+
+    photoId,
+
+    {
+
+      caption:
+
+        "🔔 PEMBAYARAN SUBSCRIPTION MASUK\n\n" +
+
+        `👤 User ID: ${chatId}\n` +
+
+        `👤 Nama: ${
+          user.firstName || "-"
+        }\n` +
+
+        `🔗 Username: ${
+          user.username
+            ? "@" + user.username
+            : "-"
+        }\n\n` +
+
+        `📦 Paket: ${
+          request.packageName
+        }\n` +
+
+        `💰 Total: ${
+          subscription.formatRupiah(
+            request.price
+          )
+        }\n` +
+
+        `⏳ Durasi: ${
+          request.durationDays
+        } hari\n\n` +
+
+        "👇 Silakan periksa bukti pembayaran.",
+
+      reply_markup: {
+
+        inline_keyboard: [
+
+          [
+
+            {
+              text:
+                "✅ SETUJUI",
+
+              callback_data:
+                `APPROVE_${chatId}`
+            },
+
+            {
+              text:
+                "❌ TOLAK",
+
+              callback_data:
+                `REJECT_${chatId}`
+            }
+
+          ]
+
+        ]
+
       }
+
+    }
+
+  );
+
+
+  console.log(
+    `✅ BUKTI PEMBAYARAN ${chatId} → ADMIN`
+  );
+
+  return;
+}
 
       // ==================================================
       // PESAN TANPA TEXT
