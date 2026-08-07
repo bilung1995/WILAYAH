@@ -1475,6 +1475,103 @@ bot.on(
 
 
       // ==================================================
+// TAMBAH KOTA
+// ==================================================
+
+if (
+  text ===
+  "🏙️ TAMBAH KOTA"
+) {
+
+  // ==================================================
+  // CEK SUBSCRIPTION
+  // ==================================================
+
+  if (
+    !subscription.hasActiveSubscription(
+      user
+    )
+  ) {
+
+    await bot.sendMessage(
+
+      chatId,
+
+      subscription.getSubscriptionMessage(),
+
+      {
+        reply_markup:
+          subscription.getSubscriptionKeyboard()
+      }
+
+    );
+
+    return;
+
+  }
+
+
+  // ==================================================
+  // CEK KUOTA WILAYAH
+  //
+  // 1 TOP UP = 2 KUOTA
+  // 1 PILIH WILAYAH = 1 KUOTA
+  // ==================================================
+
+  const quota =
+    Number(
+      user.locationQuota || 0
+    );
+
+
+  if (
+    quota <= 0
+  ) {
+
+    await bot.sendMessage(
+
+      chatId,
+
+      "⚠️ KUOTA WILAYAH HABIS\n\n" +
+
+      "Anda sudah menggunakan seluruh kuota wilayah.\n\n" +
+
+      "💳 Silakan TOP UP terlebih dahulu " +
+
+      "untuk mendapatkan 2 kuota wilayah lagi.",
+
+      {
+        reply_markup:
+          mainKeyboard(chatId)
+      }
+
+    );
+
+    return;
+
+  }
+
+
+  // ==================================================
+  // SUBSCRIPTION AKTIF
+  // + KUOTA MASIH ADA
+  // ==================================================
+
+  await wilayah.showProvinsi(
+
+    bot,
+
+    chatId
+
+  );
+
+
+  return;
+
+    }
+
+
+      // ==================================================
       // PESAN TIDAK DIKENAL
       // ==================================================
 
