@@ -3,10 +3,10 @@ const axios = require("axios");
 const API =
   "https://www.emsifa.com/api-wilayah-indonesia/api";
 
-
-// ================================
+// ======================================================
 // PROVINSI
-// ================================
+// ======================================================
+
 async function showProvinsi(
   bot,
   chatId
@@ -19,9 +19,7 @@ async function showProvinsi(
         `${API}/provinces.json`
       );
 
-
-    let buttons = [];
-
+    const buttons = [];
 
     res.data.forEach(
       prov => {
@@ -29,6 +27,7 @@ async function showProvinsi(
         buttons.push([
           {
             text: prov.name,
+
             callback_data:
               `prov_${prov.id}|${prov.name}`
           }
@@ -37,23 +36,25 @@ async function showProvinsi(
       }
     );
 
-
     await bot.sendMessage(
+
       chatId,
-      "🇮🇩 Pilih Provinsi:",
+
+      "🇮🇩 PILIH PROVINSI:",
+
       {
-        reply_markup:{
+        reply_markup: {
           inline_keyboard:
             buttons
         }
       }
+
     );
 
+  } catch (error) {
 
-  } catch(error){
-
-    console.log(
-      "ERROR PROVINSI:",
+    console.error(
+      "❌ ERROR PROVINSI:",
       error.message
     );
 
@@ -67,38 +68,43 @@ async function showProvinsi(
 }
 
 
-
-// ================================
+// ======================================================
 // KABUPATEN / KOTA
-// ================================
+// ======================================================
+
 async function showKabupaten(
   bot,
   chatId,
   provData
-){
+) {
 
   try {
 
     const data =
-      provData.split("|");
-
+      String(provData).split("|");
 
     const provId =
-      data[0];
-
+      data[0] || "";
 
     const provName =
-      data[1];
+      data.slice(1).join("|") || "";
 
+    if (!provId) {
+
+      await bot.sendMessage(
+        chatId,
+        "❌ Data provinsi tidak valid."
+      );
+
+      return;
+    }
 
     const res =
       await axios.get(
         `${API}/regencies/${provId}.json`
       );
 
-
-    let buttons = [];
-
+    const buttons = [];
 
     res.data.forEach(
       kab => {
@@ -106,6 +112,7 @@ async function showKabupaten(
         buttons.push([
           {
             text: kab.name,
+
             callback_data:
               `kab_${kab.id}|${provName}|${kab.name}`
           }
@@ -114,29 +121,31 @@ async function showKabupaten(
       }
     );
 
-
     await bot.sendMessage(
+
       chatId,
-      "🏙 Pilih Kabupaten/Kota:",
+
+      "🏙️ PILIH KABUPATEN/KOTA:",
+
       {
-        reply_markup:{
+        reply_markup: {
           inline_keyboard:
             buttons
         }
       }
+
     );
 
+  } catch (error) {
 
-  } catch(error){
-
-    console.log(
-      "ERROR KABUPATEN:",
+    console.error(
+      "❌ ERROR KABUPATEN:",
       error.message
     );
 
     await bot.sendMessage(
       chatId,
-      "❌ Gagal mengambil kabupaten."
+      "❌ Gagal mengambil data kabupaten/kota."
     );
 
   }
@@ -144,43 +153,46 @@ async function showKabupaten(
 }
 
 
-
-// ================================
+// ======================================================
 // KECAMATAN
-// ================================
+// ======================================================
+
 async function showKecamatan(
   bot,
   chatId,
   kabData
-){
+) {
 
   try {
 
-
     const data =
-      kabData.split("|");
-
+      String(kabData).split("|");
 
     const kabId =
-      data[0];
-
+      data[0] || "";
 
     const provName =
-      data[1];
-
+      data[1] || "";
 
     const kabName =
-      data[2];
+      data[2] || "";
 
+    if (!kabId) {
+
+      await bot.sendMessage(
+        chatId,
+        "❌ Data kabupaten/kota tidak valid."
+      );
+
+      return;
+    }
 
     const res =
       await axios.get(
         `${API}/districts/${kabId}.json`
       );
 
-
-    let buttons = [];
-
+    const buttons = [];
 
     res.data.forEach(
       kec => {
@@ -197,30 +209,31 @@ async function showKecamatan(
       }
     );
 
-
     await bot.sendMessage(
+
       chatId,
-      "📍 Pilih Kecamatan:",
+
+      "📍 PILIH KECAMATAN:",
+
       {
-        reply_markup:{
+        reply_markup: {
           inline_keyboard:
             buttons
         }
       }
+
     );
 
+  } catch (error) {
 
-  } catch(error){
-
-    console.log(
-      "ERROR KECAMATAN:",
+    console.error(
+      "❌ ERROR KECAMATAN:",
       error.message
     );
 
-
     await bot.sendMessage(
       chatId,
-      "❌ Gagal mengambil kecamatan."
+      "❌ Gagal mengambil data kecamatan."
     );
 
   }
@@ -228,15 +241,12 @@ async function showKecamatan(
 }
 
 
-
-// ================================
+// ======================================================
 // EXPORT
-// ================================
+// ======================================================
 
 module.exports = {
-
   showProvinsi,
   showKabupaten,
   showKecamatan
-
 };
