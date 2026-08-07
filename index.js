@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const TelegramBot = require("node-telegram-bot-api");
 const wilayah = require("./wilayah");
-
+const subscription = require("./subscription");
 
 
 // ======================================================
@@ -673,37 +673,69 @@ bot.on(
       }
 
       // ==================================================
-      // TOP UP
-      // ==================================================
+// TOP UP / SUBSCRIPTION
+// ==================================================
 
-      if (text === "💳 TOP UP") {
+if (text === "💳 TOP UP") {
 
-        await bot.sendMessage(
+  await bot.sendMessage(
 
-          chatId,
+    chatId,
 
-          "💳 TOP UP\n\n" +
+    subscription.getSubscriptionMessage(),
 
-          "Fitur top up akan dipasang "
-          + "pada Bagian berikutnya.",
+    {
+      reply_markup:
+        subscription.getSubscriptionKeyboard()
+    }
 
-          {
-            reply_markup:
-              mainKeyboard(chatId)
-          }
+  );
 
-        );
+  return;
+}
 
-        return;
-      }
-
-      // ==================================================
+// ==================================================
 // TAMBAH KOTA
+// WAJIB SUBSCRIPTION AKTIF
 // ==================================================
 
 if (
   text === "🏙️ TAMBAH KOTA"
 ) {
+
+  const user =
+    getUser(chatId);
+
+  // ==================================================
+  // CEK SUBSCRIPTION
+  // ==================================================
+
+  if (
+    !subscription.hasActiveSubscription(
+      user
+    )
+  ) {
+
+    await bot.sendMessage(
+
+      chatId,
+
+      subscription.getSubscriptionMessage(),
+
+      {
+        reply_markup:
+          subscription.getSubscriptionKeyboard()
+      }
+
+    );
+
+    return;
+  }
+
+  // ==================================================
+  // SUBSCRIPTION AKTIF
+  // BOLEH PILIH WILAYAH
+  // ==================================================
 
   try {
 
@@ -720,19 +752,22 @@ if (
     );
 
     await bot.sendMessage(
+
       chatId,
+
       "❌ Gagal membuka pemilihan wilayah.",
+
       {
         reply_markup:
           mainKeyboard(chatId)
       }
+
     );
 
   }
 
   return;
 }
-
       
       // ==================================================
       // PANEL ADMIN
