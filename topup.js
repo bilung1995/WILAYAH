@@ -1,10 +1,13 @@
 // ======================================================
 // topup.js
-// SISTEM TOP UP + BUKTI PEMBAYARAN
+// SISTEM TOP UP + BUKTI PEMBAYARAN + KUOTA WILAYAH
+// 1 TOP UP = 2 KUOTA WILAYAH
 // ======================================================
 
 
+// ======================================================
 // DATA REKENING
+// ======================================================
 
 const paymentAccounts = {
 
@@ -30,13 +33,22 @@ const paymentAccounts = {
 
 
 // ======================================================
+// JUMLAH KUOTA SETIAP TOP UP
+// ======================================================
+
+const TOPUP_QUOTA = 2;
+
+
+// ======================================================
 // PESAN TOP UP
 // ======================================================
 
 function getTopupMessage() {
 
   return (
-    "💳 TOP UP SALDO\n\n" +
+    "💳 TOP UP KUOTA WILAYAH\n\n" +
+
+    "1 kali TOP UP = 2 kali tambah wilayah.\n\n" +
 
     "Silakan transfer ke salah satu rekening berikut:\n\n" +
 
@@ -65,7 +77,7 @@ function getTopupMessage() {
 
 
 // ======================================================
-// STATUS TOP UP USER
+// DATA TOP UP YANG SEDANG DIPROSES
 // ======================================================
 
 const pendingTopup = {};
@@ -79,7 +91,8 @@ function startTopup(userId) {
 
   pendingTopup[userId] = {
 
-    status: "waiting_proof",
+    status:
+      "waiting_proof",
 
     createdAt:
       new Date().toISOString()
@@ -101,7 +114,7 @@ function isWaitingProof(userId) {
   return (
     pendingTopup[userId] &&
     pendingTopup[userId].status ===
-    "waiting_proof"
+      "waiting_proof"
   );
 
 }
@@ -116,7 +129,9 @@ function saveProof(
   photoId
 ) {
 
-  if (!pendingTopup[userId]) {
+  if (
+    !pendingTopup[userId]
+  ) {
 
     return false;
 
@@ -130,7 +145,8 @@ function saveProof(
     status:
       "waiting_admin",
 
-    photoId: photoId,
+    photoId:
+      photoId,
 
     updatedAt:
       new Date().toISOString()
@@ -155,14 +171,56 @@ function getTopupData(userId) {
 
 
 // ======================================================
-// ADMIN SETUJUI
+// CEK APAKAH TOP UP MENUNGGU ADMIN
+// ======================================================
+
+function isWaitingAdmin(userId) {
+
+  return (
+    pendingTopup[userId] &&
+    pendingTopup[userId].status ===
+      "waiting_admin"
+  );
+
+}
+
+
+// ======================================================
+// ADMIN SETUJUI TOP UP
+// ======================================================
+// Setiap TOP UP disetujui:
+// +2 kuota wilayah
 // ======================================================
 
 function approveTopup(userId) {
 
-  if (!pendingTopup[userId]) {
+  if (
+    !pendingTopup[userId]
+  ) {
 
-    return false;
+    return {
+
+      success: false,
+
+      quotaAdded: 0
+
+    };
+
+  }
+
+
+  if (
+    pendingTopup[userId].status !==
+      "waiting_admin"
+  ) {
+
+    return {
+
+      success: false,
+
+      quotaAdded: 0
+
+    };
 
   }
 
@@ -171,18 +229,45 @@ function approveTopup(userId) {
     "approved";
 
 
-  return true;
+  pendingTopup[userId].quotaAdded =
+    TOPUP_QUOTA;
+
+
+  pendingTopup[userId].approvedAt =
+    new Date().toISOString();
+
+
+  return {
+
+    success: true,
+
+    quotaAdded:
+      TOPUP_QUOTA
+
+  };
 
 }
 
 
 // ======================================================
-// ADMIN TOLAK
+// ADMIN TOLAK TOP UP
 // ======================================================
 
 function rejectTopup(userId) {
 
-  if (!pendingTopup[userId]) {
+  if (
+    !pendingTopup[userId]
+  ) {
+
+    return false;
+
+  }
+
+
+  if (
+    pendingTopup[userId].status !==
+      "waiting_admin"
+  ) {
 
     return false;
 
@@ -193,10 +278,24 @@ function rejectTopup(userId) {
     "rejected";
 
 
+  pendingTopup[userId].rejectedAt =
+    new Date().toISOString();
+
+
   return true;
 
 }
 
+
+// ======================================================
+// AMBIL JUMLAH KUOTA TOP UP
+// ======================================================
+
+function getTopupQuota() {
+
+  return TOPUP_QUOTA;
+
+}
 
 
 // ======================================================
@@ -206,6 +305,8 @@ function rejectTopup(userId) {
 module.exports = {
 
   paymentAccounts,
+
+  TOPUP_QUOTA,
 
   getTopupMessage,
 
@@ -217,8 +318,12 @@ module.exports = {
 
   getTopupData,
 
+  isWaitingAdmin,
+
   approveTopup,
 
-  rejectTopup
+  rejectTopup,
+
+  getTopupQuota
 
 };
