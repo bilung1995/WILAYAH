@@ -6,15 +6,6 @@ const path = require("path");
 const TelegramBot =
   require("node-telegram-bot-api");
 
-const subscription =
-  require("./subscription");
-
-const topup =
-  require("./topup");
-
-const wilayah =
-  require("./wilayah");
-
 
 // ======================================================
 // ENV
@@ -25,11 +16,20 @@ const TOKEN =
   process.env.BOT_TOKEN;
 
 
-const ADMIN_ID =
-  String(
-    process.env.ADMIN_ID || ""
+if (!TOKEN) {
+
+  console.log(
+    "❌ TOKEN TELEGRAM TIDAK ADA"
   );
 
+  process.exit(1);
+
+}
+
+
+// ======================================================
+// DATABASE
+// ======================================================
 
 const DATA_FILE =
   path.join(
@@ -38,28 +38,19 @@ const DATA_FILE =
   );
 
 
-// ======================================================
-// DATABASE
-// ======================================================
-
 function defaultDatabase(){
 
   return {
-
-    users:{},
-
-    locations:{},
-
-    topups:{}
-
+    users:{}
   };
 
 }
 
 
+
 function loadDatabase(){
 
-  try{
+  try {
 
     if(
       !fs.existsSync(DATA_FILE)
@@ -92,7 +83,7 @@ function loadDatabase(){
     );
 
 
-  }catch(error){
+  } catch(error){
 
     console.log(
       "DATABASE ERROR:",
@@ -105,6 +96,7 @@ function loadDatabase(){
   }
 
 }
+
 
 
 let database =
@@ -131,18 +123,6 @@ function saveDatabase(){
 // TELEGRAM BOT
 // ======================================================
 
-if(!TOKEN){
-
-  console.log(
-    "TOKEN TELEGRAM BELUM ADA"
-  );
-
-  process.exit(1);
-
-}
-
-
-
 const bot =
   new TelegramBot(
     TOKEN,
@@ -168,22 +148,17 @@ function getUser(chatId){
     String(chatId);
 
 
-
   if(
     !database.users[id]
   ){
 
     database.users[id] = {
 
-      id,
+      id:id,
 
       firstName:"",
 
       username:"",
-
-      balance:0,
-
-      subscription:null,
 
       createdAt:
         new Date().toISOString()
@@ -208,44 +183,33 @@ function getUser(chatId){
 
 function mainKeyboard(){
 
- return {
+  return {
 
-  keyboard:[
+    keyboard:[
 
-   [
-    {
-     text:"🏙️ TAMBAH KOTA"
-    },
-    {
-     text:"📍 KOTA YANG DIPILIH"
-    }
-   ],
+      [
+        {
+          text:"🏙️ TAMBAH KOTA"
+        }
+      ],
 
+      [
+        {
+          text:"📍 KOTA YANG DIPILIH"
+        }
+      ],
 
-   [
-    {
-     text:"💳 TOP UP"
-    },
-    {
-     text:"👤 PROFIL"
-    }
-   ],
+      [
+        {
+          text:"👤 PROFIL"
+        }
+      ]
 
+    ],
 
-   [
-    {
-     text:"📊 STATUS"
-    },
-    {
-     text:"❓ BANTUAN"
-    }
-   ]
+    resize_keyboard:true
 
-  ],
-
-  resize_keyboard:true
-
- };
+  };
 
 }
 
@@ -255,60 +219,76 @@ function mainKeyboard(){
 // START
 // ======================================================
 
-
 bot.onText(
- /^\/start$/,
- async msg=>{
+  /^\/start$/,
+  async message => {
 
 
-  const chatId =
-    msg.chat.id;
+    const chatId =
+      message.chat.id;
 
 
-  const user =
-    getUser(chatId);
-
-
-
-  user.firstName =
-    msg.from.first_name || "";
-
-
-  user.username =
-    msg.from.username || "";
-
-
-  saveDatabase();
+    const user =
+      getUser(chatId);
 
 
 
-  await bot.sendMessage(
-
-    chatId,
-
-    "🎉 BOT BERHASIL AKTIF\n\n" +
-
-    "✅ Telegram terhubung\n" +
-
-    "✅ Database siap\n\n" +
-
-    "Silakan pilih menu.",
+    user.firstName =
+      message.from.first_name || "";
 
 
-    {
-      reply_markup:
-        mainKeyboard()
-    }
-
-  );
+    user.username =
+      message.from.username || "";
 
 
- }
+    saveDatabase();
 
+
+
+    await bot.sendMessage(
+
+      chatId,
+
+      "🎉 BOT BERHASIL AKTIF!\n\n" +
+
+      "✅ Telegram terhubung\n" +
+
+      "✅ Database siap\n\n" +
+
+      "Silakan pilih menu.",
+
+
+      {
+        reply_markup:
+          mainKeyboard()
+      }
+
+    );
+
+
+    console.log(
+      "START USER:",
+      chatId
+    );
+
+
+  }
 );
 
 
 
-console.log(
- "✅ BAGIAN 1 SELESAI"
+// ======================================================
+// ERROR
+// ======================================================
+
+bot.on(
+  "polling_error",
+  error => {
+
+    console.log(
+      "❌ POLLING ERROR:",
+      error.message
+    );
+
+  }
 );
