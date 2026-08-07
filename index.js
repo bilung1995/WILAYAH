@@ -858,14 +858,15 @@ if (
 
 
   const result =
-    subscription.createSubscriptionRequest(
-      user,
-      packageId
-    );
+  subscription.createSubscriptionRequest(
+    user,
+    packageId
+  );
 
 
-  saveDatabase();
+user.waitingPaymentProof = true;
 
+saveDatabase();
 
   if (
     !result.success
