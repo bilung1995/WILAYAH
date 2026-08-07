@@ -1614,7 +1614,7 @@ bot.on(
       // KIRIM FOTO KE ADMIN
       // ==================================================
 
-      await bot.sendPhoto(
+            await bot.sendPhoto(
 
         ADMIN_ID,
 
@@ -1643,9 +1643,7 @@ bot.on(
             }\n` +
 
             `💰 Harga: Rp ${
-              harga.toLocaleString(
-                "id-ID"
-              )
+              harga.toLocaleString("id-ID")
             }\n` +
 
             `⏳ Durasi: ${
@@ -1653,7 +1651,6 @@ bot.on(
             } hari\n\n` +
 
             "👇 Silakan periksa bukti pembayaran.",
-
 
           reply_markup: {
 
@@ -1716,9 +1713,12 @@ bot.on(
     }
 
   }
-);
 
-      // ==================================================
+);
+  
+
+
+// ==================================================
 // PILIH PAKET SUBSCRIPTION
 // ==================================================
 
