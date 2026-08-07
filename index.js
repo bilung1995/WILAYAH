@@ -807,13 +807,15 @@ bot.on(
           );
 
 
-        wilayah.simpanWilayah(
-          chatId,
-          {
-            kecamatanCode:
-              kecId
-          }
-        );
+        saveUserLocation(
+  chatId,
+  {
+    kecamatanCode: kecId,
+    provinsi: "Dipilih",
+    kabupaten: "Dipilih",
+    kecamatan: kecId
+  }
+);
 
 
         await bot.answerCallbackQuery(
