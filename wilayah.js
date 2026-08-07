@@ -7,52 +7,56 @@ let userWilayah = {};
 
 
 // ================================
-// TAMPIL PROVINSI
+// PROVINSI
 // ================================
-async function showProvinsi(bot, chatId) {
+async function showProvinsi(
+  bot,
+  chatId
+) {
 
   try {
 
-    const res = await axios.get(
-      `${API}/provinces.json`
-    );
+    const res =
+      await axios.get(
+        `${API}/provinces.json`
+      );
+
 
     let buttons = [];
 
-    res.data.forEach((prov) => {
 
-      buttons.push([
-        {
-          text: prov.name,
-          callback_data:
-            `prov_${prov.id}`
-        }
-      ]);
+    res.data.forEach(
+      prov => {
 
-    });
+        buttons.push([
+          {
+            text: prov.name,
+            callback_data:
+              `prov_${prov.id}`
+          }
+        ]);
+
+      }
+    );
 
 
     await bot.sendMessage(
       chatId,
       "🇮🇩 Pilih Provinsi:",
       {
-        reply_markup: {
-          inline_keyboard: buttons
+        reply_markup:{
+          inline_keyboard:
+            buttons
         }
       }
     );
 
 
-  } catch (err) {
+  } catch(error){
 
     console.log(
-      "Error provinsi:",
-      err.message
-    );
-
-    bot.sendMessage(
-      chatId,
-      "❌ Gagal mengambil data provinsi."
+      "ERROR PROVINSI:",
+      error.message
     );
 
   }
@@ -62,35 +66,38 @@ async function showProvinsi(bot, chatId) {
 
 
 // ================================
-// TAMPIL KABUPATEN
+// KABUPATEN
 // ================================
 async function showKabupaten(
   bot,
   chatId,
   provId
-) {
+){
 
   try {
 
-    const res = await axios.get(
-      `${API}/regencies/${provId}.json`
+    const res =
+      await axios.get(
+        `${API}/regencies/${provId}.json`
+      );
+
+
+    let buttons=[];
+
+
+    res.data.forEach(
+      kab => {
+
+        buttons.push([
+          {
+            text:kab.name,
+            callback_data:
+              `kab_${kab.id}`
+          }
+        ]);
+
+      }
     );
-
-
-    let buttons = [];
-
-
-    res.data.forEach((kab)=>{
-
-      buttons.push([
-        {
-          text:kab.name,
-          callback_data:
-            `kab_${kab.id}`
-        }
-      ]);
-
-    });
 
 
     await bot.sendMessage(
@@ -98,16 +105,18 @@ async function showKabupaten(
       "🏙 Pilih Kabupaten/Kota:",
       {
         reply_markup:{
-          inline_keyboard:buttons
+          inline_keyboard:
+            buttons
         }
       }
     );
 
 
-  } catch(err){
+  } catch(error){
 
     console.log(
-      err.message
+      "ERROR KABUPATEN:",
+      error.message
     );
 
   }
@@ -117,7 +126,7 @@ async function showKabupaten(
 
 
 // ================================
-// TAMPIL KECAMATAN
+// KECAMATAN
 // ================================
 async function showKecamatan(
   bot,
@@ -127,25 +136,28 @@ async function showKecamatan(
 
   try {
 
-    const res = await axios.get(
-      `${API}/districts/${kabId}.json`
-    );
+    const res =
+      await axios.get(
+        `${API}/districts/${kabId}.json`
+      );
 
 
     let buttons=[];
 
 
-    res.data.forEach((kec)=>{
+    res.data.forEach(
+      kec => {
 
-      buttons.push([
-        {
-          text:kec.name,
-          callback_data:
-            `kec_${kec.id}`
-        }
-      ]);
+        buttons.push([
+          {
+            text:kec.name,
+            callback_data:
+              `kec_${kec.id}`
+          }
+        ]);
 
-    });
+      }
+    );
 
 
     await bot.sendMessage(
@@ -153,16 +165,18 @@ async function showKecamatan(
       "📍 Pilih Kecamatan:",
       {
         reply_markup:{
-          inline_keyboard:buttons
+          inline_keyboard:
+            buttons
         }
       }
     );
 
 
-  }catch(err){
+  } catch(error){
 
     console.log(
-      err.message
+      "ERROR KECAMATAN:",
+      error.message
     );
 
   }
@@ -176,13 +190,27 @@ async function showKecamatan(
 // ================================
 function simpanWilayah(
   chatId,
-  wilayah
+  data
 ){
 
   userWilayah[chatId] =
-    wilayah;
+    data;
 
-  return wilayah;
+
+  return data;
+
+}
+
+
+
+// ================================
+// AMBIL WILAYAH
+// ================================
+function getWilayah(
+  chatId
+){
+
+  return userWilayah[chatId];
 
 }
 
@@ -195,6 +223,7 @@ module.exports = {
   showProvinsi,
   showKabupaten,
   showKecamatan,
-  simpanWilayah
+  simpanWilayah,
+  getWilayah
 
 };
