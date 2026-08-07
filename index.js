@@ -904,123 +904,137 @@ saveDatabase();
 }
 
 
-      // ============================
-      // PILIH PROVINSI
-      // ============================
+ // ============================
+// PILIH PROVINSI
+// ============================
 
-      if (
-        data.startsWith("prov_")
-      ) {
+if (
+  data.startsWith("prov_")
+) {
 
-        const provId =
-          data.replace(
-            "prov_",
-            ""
-          );
-
-        await bot.answerCallbackQuery(
-          query.id
-        );
-
-        await wilayah.showKabupaten(
-          bot,
-          chatId,
-          provId
-        );
-
-        return;
-      }
+  const provData =
+    data.replace(
+      "prov_",
+      ""
+    )
+    .replace(
+      "_",
+      "|"
+    );
 
 
-      // ============================
-      // PILIH KABUPATEN
-      // ============================
-
-      if (
-        data.startsWith("kab_")
-      ) {
-
-        const kabId =
-          data.replace(
-            "kab_",
-            ""
-          );
-
-        await bot.answerCallbackQuery(
-          query.id
-        );
-
-        await wilayah.showKecamatan(
-          bot,
-          chatId,
-          kabId
-        );
-
-        return;
-      }
+  await bot.answerCallbackQuery(
+    query.id
+  );
 
 
-      // ============================
-      // PILIH KECAMATAN
-      // ============================
-
-      if (
-        data.startsWith("kec_")
-      ) {
-
-        const kecId =
-          data.replace(
-            "kec_",
-            ""
-          );
+  await wilayah.showKabupaten(
+    bot,
+    chatId,
+    provData
+  );
 
 
-        saveUserLocation(
-  chatId,
-  {
-    kecamatanCode: kecId,
-    provinsi: "Dipilih",
-    kabupaten: "Dipilih",
-    kecamatan: kecId
-  }
-);
+  return;
+}
 
 
-        await bot.answerCallbackQuery(
-          query.id
-        );
+
+// ============================
+// PILIH KABUPATEN
+// ============================
+
+if (
+  data.startsWith("kab_")
+) {
+
+  const kabData =
+    data.replace(
+      "kab_",
+      ""
+    )
+    .replace(
+      "_",
+      "|"
+    );
 
 
-        await bot.sendMessage(
-          chatId,
-          "✅ Kecamatan berhasil dipilih.\n\n" +
-          "Wilayah Anda sudah tersimpan.",
-          {
-            reply_markup:
-              mainKeyboard()
-          }
-        );
-
-        return;
-      }
+  await bot.answerCallbackQuery(
+    query.id
+  );
 
 
-      await bot.answerCallbackQuery(
-        query.id
-      );
+  await wilayah.showKecamatan(
+    bot,
+    chatId,
+    kabData
+  );
 
 
-    } catch (error) {
+  return;
+}
 
-      console.error(
-        "❌ CALLBACK ERROR:",
-        error
-      );
 
+
+// ============================
+// PILIH KECAMATAN
+// ============================
+
+if (
+  data.startsWith("kec_")
+) {
+
+  const dataKec =
+    data.replace(
+      "kec_",
+      ""
+    )
+    .split("|");
+
+
+  const kecId =
+    dataKec[0];
+
+  const provinsi =
+    dataKec[1];
+
+  const kabupaten =
+    dataKec[2];
+
+  const kecamatan =
+    dataKec[3];
+
+
+  saveUserLocation(
+    chatId,
+    {
+      provinsi,
+      kabupaten,
+      kecamatan,
+      kecamatanCode:
+        kecId
     }
+  );
 
-  }
-);
+
+  await bot.answerCallbackQuery(
+    query.id
+  );
+
+
+  await bot.sendMessage(
+    chatId,
+    "✅ Wilayah berhasil disimpan.",
+    {
+      reply_markup:
+        mainKeyboard()
+    }
+  );
+
+
+  return;
+    }     
+            
 
 // ======================================================
 // FOTO BUKTI TRANSFER
