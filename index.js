@@ -759,6 +759,86 @@ bot.on(
         query.data;
 
       // ============================
+// ADMIN APPROVE / REJECT
+// ============================
+
+if (
+  data.startsWith("APPROVE_")
+ ||
+  data.startsWith("REJECT_")
+){
+
+  if (
+    String(chatId) !== ADMIN_ID
+  ){
+    return;
+  }
+
+
+  const userId =
+    data.split("_")[1];
+
+
+  const user =
+    getUser(userId);
+
+
+  if(
+    data.startsWith("APPROVE_")
+  ){
+
+    subscription.activateSubscription(
+      user,
+      user.subscriptionRequest.packageId
+    );
+
+
+    saveDatabase();
+
+
+    await bot.sendMessage(
+      userId,
+      "🎉 Pembayaran diterima.\n\n" +
+      "Subscription Anda sudah aktif."
+    );
+
+
+    await bot.sendMessage(
+      chatId,
+      "✅ Subscription user berhasil diaktifkan."
+    );
+
+  }
+
+
+  if(
+    data.startsWith("REJECT_")
+  ){
+
+    user.subscriptionRequest =
+      null;
+
+    saveDatabase();
+
+
+    await bot.sendMessage(
+      userId,
+      "❌ Pembayaran ditolak.\n\nSilakan hubungi admin."
+    );
+
+
+    await bot.sendMessage(
+      chatId,
+      "❌ Pembayaran ditolak."
+    );
+
+  }
+
+
+  return;
+}
+
+      // ============================
 // SUBSCRIPTION
 // ============================
 
@@ -937,6 +1017,86 @@ if (
       );
 
     }
+
+  }
+);
+
+// ======================================================
+// FOTO BUKTI TRANSFER
+// ======================================================
+
+bot.on(
+  "photo",
+  async msg => {
+
+    const chatId =
+      msg.chat.id;
+
+
+    const user =
+      getUser(chatId);
+
+
+    if (
+      !user.waitingPaymentProof
+    ) {
+      return;
+    }
+
+
+    const photoId =
+      msg.photo[
+        msg.photo.length - 1
+      ].file_id;
+
+
+    user.paymentProof =
+      photoId;
+
+
+    user.waitingPaymentProof =
+      false;
+
+
+    saveDatabase();
+
+
+    await bot.sendMessage(
+      chatId,
+      "✅ Bukti transfer sudah dikirim.\n\n" +
+      "⏳ Menunggu persetujuan admin."
+    );
+
+
+    await bot.sendPhoto(
+      ADMIN_ID,
+      photoId,
+      {
+        caption:
+          "🔔 PEMBAYARAN SUBSCRIPTION MASUK\n\n" +
+          `👤 User ID: ${chatId}\n` +
+          `📦 Paket: ${user.subscriptionRequest.packageName}\n` +
+          `💰 Harga: Rp ${user.subscriptionRequest.price.toLocaleString("id-ID")}\n\n` +
+          "Silakan pilih tindakan:",
+          
+        reply_markup:{
+          inline_keyboard:[
+            [
+              {
+                text:"✅ SETUJUI",
+                callback_data:
+                  `APPROVE_${chatId}`
+              },
+              {
+                text:"❌ TOLAK",
+                callback_data:
+                  `REJECT_${chatId}`
+              }
+            ]
+          ]
+        }
+      }
+    );
 
   }
 );
