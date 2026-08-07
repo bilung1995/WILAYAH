@@ -1571,56 +1571,14 @@ if (
     }
 
 
-      // ==================================================
-      // PESAN TIDAK DIKENAL
-      // ==================================================
+// ==================================================
+// PESAN TIDAK DIKENAL
+// ==================================================
+// Pesan lain diabaikan.
 
-      await bot.sendMessage(
-
-        chatId,
-
-        "⚠️ Menu tidak dikenali.\n\n" +
-
-        "Silakan pilih tombol yang tersedia.",
-
-        {
-
-          reply_markup:
-            mainKeyboard(chatId)
-
-        }
-
-      );
-
-
-    } catch (error) {
-
-      console.error(
-
-        "❌ ERROR MENU UTAMA:",
-
-        error
-
-      );
-
-
-      try {
-
-        await bot.sendMessage(
-
-          message.chat.id,
-
-          "❌ Terjadi kesalahan pada bot.\n\n" +
-          "Silakan coba lagi."
-
-        );
-
-      } catch (_) {}
-
-    }
+return;
 
   }
-
 );
 
 
