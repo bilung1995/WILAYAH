@@ -913,15 +913,10 @@ if (
 ) {
 
   const provData =
-    data.replace(
-      "prov_",
-      ""
-    )
-    .replace(
-      "_",
-      "|"
-    );
-
+  data.replace(
+    "prov_",
+    ""
+  );
 
   await bot.answerCallbackQuery(
     query.id
@@ -949,15 +944,10 @@ if (
 ) {
 
   const kabData =
-    data.replace(
-      "kab_",
-      ""
-    )
-    .replace(
-      "_",
-      "|"
-    );
-
+  data.replace(
+    "kab_",
+    ""
+  );
 
   await bot.answerCallbackQuery(
     query.id
