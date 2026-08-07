@@ -550,9 +550,9 @@ async function showStatus(chatId) {
 
     "🟢 Telegram: AKTIF\n" +
 
-    "🟢 Database: AKTIF\n" +
+    "🇯🇵 Database: AKTIF\n" +
 
-    "🟢 Server: AKTIF\n\n" +
+    "🚀 Server: AKTIF\n\n" +
 
     `💳 SUBSCRIPTION:\n` +
 
@@ -932,14 +932,22 @@ bot.on(
 // ==================================================
 
 // ==================================================
-// TOP UP
+// TOP UP / PILIH PAKET SUBSCRIPTION
 // ==================================================
 
 if (text === "💳 TOP UP") {
 
-  await subscription.showPackages(
-    bot,
-    chatId
+  await bot.sendMessage(
+
+    chatId,
+
+    subscription.getSubscriptionMessage(),
+
+    {
+      reply_markup:
+        subscription.getSubscriptionKeyboard()
+    }
+
   );
 
   return;
@@ -1480,6 +1488,119 @@ bot.on(
 
         return;
       }
+
+      // ==================================================
+// ADMIN SETUJUI SUBSCRIPTION
+// ==================================================
+
+if (
+  data.startsWith("APPROVE_")
+) {
+
+  if (!isAdmin(chatId)) {
+
+    await bot.answerCallbackQuery(
+      query.id,
+      {
+        text: "⛔ Akses ditolak.",
+        show_alert: true
+      }
+    );
+
+    return;
+  }
+
+  const targetUserId =
+    data.substring("APPROVE_".length);
+
+  const targetUser =
+    getUser(targetUserId);
+
+  if (
+    !targetUser.subscriptionRequest
+  ) {
+
+    await bot.answerCallbackQuery(
+      query.id,
+      {
+        text:
+          "❌ Permintaan subscription tidak ditemukan.",
+        show_alert: true
+      }
+    );
+
+    return;
+  }
+
+  const packageId =
+    targetUser
+      .subscriptionRequest
+      .packageId;
+
+  const result =
+    subscription.activateSubscription(
+      targetUser,
+      packageId
+    );
+
+  if (!result.success) {
+
+    await bot.answerCallbackQuery(
+      query.id,
+      {
+        text: result.message,
+        show_alert: true
+      }
+    );
+
+    return;
+  }
+
+  saveDatabase();
+
+  await bot.answerCallbackQuery(
+    query.id,
+    {
+      text:
+        "✅ Subscription berhasil diaktifkan."
+    }
+  );
+
+  await bot.sendMessage(
+
+    targetUserId,
+
+    "🎉 PEMBAYARAN DISETUJUI\n\n" +
+
+    `📦 Paket: ${
+      result.subscription.packageName
+    }\n` +
+
+    `💰 Harga: ${
+      subscription.formatRupiah(
+        result.subscription.price
+      )
+    }\n` +
+
+    `⏳ Masa aktif: ${
+      result.subscription.durationDays || 
+      targetUser.subscriptionRequest?.durationDays ||
+      "-"
+    } hari\n\n` +
+
+    "✅ Subscription Anda sekarang AKTIF.\n\n" +
+
+    "🏙️ Anda sekarang dapat memilih kota/kecamatan.",
+
+    {
+      reply_markup:
+        mainKeyboard(targetUserId)
+    }
+
+  );
+
+  return;
+}
 
 
             // ==================================================
