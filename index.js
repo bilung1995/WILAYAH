@@ -722,7 +722,6 @@ bot.on(
 // ======================================================
 // CALLBACK WILAYAH
 // ======================================================
-
 bot.on(
   "callback_query",
   async query => {
@@ -736,9 +735,9 @@ bot.on(
         query.data;
 
 
-      // ==============================
-      // PROVINSI
-      // ==============================
+      // ==========================
+      // PILIH PROVINSI
+      // ==========================
 
       if (
         data.startsWith("prov_")
@@ -762,9 +761,9 @@ bot.on(
 
 
 
-      // ==============================
-      // KABUPATEN
-      // ==============================
+      // ==========================
+      // PILIH KABUPATEN
+      // ==========================
 
       if (
         data.startsWith("kab_")
@@ -788,9 +787,9 @@ bot.on(
 
 
 
-      // ==============================
-      // KECAMATAN
-      // ==============================
+      // ==========================
+      // PILIH KECAMATAN
+      // ==========================
 
       if (
         data.startsWith("kec_")
@@ -803,9 +802,19 @@ bot.on(
           );
 
 
+        wilayah.simpanWilayah(
+          chatId,
+          {
+            kecamatanCode:
+              kecId
+          }
+        );
+
+
         await bot.sendMessage(
           chatId,
-          "✅ Kecamatan berhasil dipilih.\n\nWilayah Anda sudah tersimpan."
+          "✅ Kecamatan berhasil dipilih.\n\n" +
+          "Wilayah sudah tersimpan."
         );
 
 
@@ -816,14 +825,16 @@ bot.on(
     } catch(error) {
 
       console.error(
-        "❌ CALLBACK WILAYAH ERROR:",
+        "❌ CALLBACK ERROR:",
         error
       );
 
     }
 
   }
-);        
+);
+
+          
 
 // ======================================================
 // ERROR TELEGRAM
