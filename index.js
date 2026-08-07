@@ -722,6 +722,7 @@ bot.on(
 // ======================================================
 // CALLBACK WILAYAH
 // ======================================================
+
 bot.on(
   "callback_query",
   async query => {
@@ -735,9 +736,9 @@ bot.on(
         query.data;
 
 
-      // ==========================
+      // ============================
       // PILIH PROVINSI
-      // ==========================
+      // ============================
 
       if (
         data.startsWith("prov_")
@@ -749,6 +750,9 @@ bot.on(
             ""
           );
 
+        await bot.answerCallbackQuery(
+          query.id
+        );
 
         await wilayah.showKabupaten(
           bot,
@@ -760,10 +764,9 @@ bot.on(
       }
 
 
-
-      // ==========================
+      // ============================
       // PILIH KABUPATEN
-      // ==========================
+      // ============================
 
       if (
         data.startsWith("kab_")
@@ -775,6 +778,9 @@ bot.on(
             ""
           );
 
+        await bot.answerCallbackQuery(
+          query.id
+        );
 
         await wilayah.showKecamatan(
           bot,
@@ -786,48 +792,67 @@ bot.on(
       }
 
 
-
-      // ==========================
+      // ============================
       // PILIH KECAMATAN
-      // ==========================
+      // ============================
 
       if (
-  data.startsWith("kec_")
-) {
+        data.startsWith("kec_")
+      ) {
 
-  const kecId =
-    data.replace(
-      "kec_",
-      ""
-    );
-
-
-  saveUserLocation(
-    chatId,
-    {
-      provinsi:
-        "Indonesia",
-      kabupaten:
-        "Kabupaten/Kota dipilih",
-      kecamatan:
-        "Kecamatan dipilih",
-      kecamatanCode:
-        kecId
-    }
-  );
+        const kecId =
+          data.replace(
+            "kec_",
+            ""
+          );
 
 
-  await bot.sendMessage(
-    chatId,
-    "✅ Kecamatan berhasil dipilih.\n\n" +
-    "Wilayah sudah tersimpan."
-  );
+        wilayah.simpanWilayah(
+          chatId,
+          {
+            kecamatanCode:
+              kecId
+          }
+        );
 
 
-  return;
+        await bot.answerCallbackQuery(
+          query.id
+        );
+
+
+        await bot.sendMessage(
+          chatId,
+          "✅ Kecamatan berhasil dipilih.\n\n" +
+          "Wilayah Anda sudah tersimpan.",
+          {
+            reply_markup:
+              mainKeyboard()
+          }
+        );
+
+        return;
       }
 
-          
+
+      await bot.answerCallbackQuery(
+        query.id
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "❌ CALLBACK ERROR:",
+        error
+      );
+
+    }
+
+  }
+);
+
+  
 
 // ======================================================
 // ERROR TELEGRAM
@@ -1173,6 +1198,7 @@ process.on(
 process.on(
   "SIGINT",
   () => {
+
     console.log(
       "⚠️ SIGINT diterima."
     );
@@ -1181,8 +1207,11 @@ process.on(
 
     server.close(
       () => {
+
         process.exit(0);
+
       }
     );
+
   }
 );
