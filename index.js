@@ -2014,64 +2014,79 @@ const server =
 
 
           // ====================================================
-// GREEN API WEBHOOK — LOG LENGKAP
+// GREEN API WEBHOOK — DATA PESAN WHATSAPP
+// ====================================================
+
+const groupId =
+  data?.senderData?.chatId ||
+  "tidak diketahui";
+
+const groupName =
+  data?.senderData?.chatName ||
+  "Nama grup tidak diketahui";
+
+const senderName =
+  data?.senderData?.senderName ||
+  "Pengirim tidak diketahui";
+
+const messageType =
+  data?.messageData?.typeMessage ||
+  "tidak diketahui";
+
+let messageText = "";
+
+if (
+  messageType === "textMessage"
+) {
+
+  messageText =
+    data?.messageData?.textMessageData?.textMessage ||
+    "";
+
+}
+
+else if (
+  messageType === "extendedTextMessage"
+) {
+
+  messageText =
+    data?.messageData?.extendedTextMessageData?.text ||
+    "";
+
+}
+
+
+// ====================================================
+// TAMPILKAN DI RAILWAY
 // ====================================================
 
 console.log(
   "📱 GREEN API WEBHOOK MASUK"
 );
 
-// ====================================================
-// NAMA GRUP
-// ====================================================
-
 console.log(
-  "📌 NAMA GRUP:",
-  data?.senderData?.chatName || "tidak diketahui"
+  "👥 GRUP WHATSAPP:",
+  groupName
 );
 
-// ====================================================
-// ID GRUP
-// ====================================================
-
 console.log(
-  "🆔 ID GRUP:",
-  data?.senderData?.chatId || "tidak diketahui"
+  "📌 ID GRUP:",
+  groupId
 );
-
-// ====================================================
-// PENGIRIM
-// ====================================================
 
 console.log(
   "👤 PENGIRIM:",
-  data?.senderData?.senderName || "tidak diketahui"
-);
-
-// ====================================================
-// TIPE PESAN
-// ====================================================
-
-console.log(
-  "💬 TIPE:",
-  data?.messageData?.typeMessage || "tidak diketahui"
-);
-
-// ====================================================
-// ISI PESAN
-// ====================================================
-
-const pesanWhatsApp =
-  data?.messageData?.textMessageData?.textMessage ||
-  data?.messageData?.extendedTextMessageData?.text ||
-  "";
-
-console.log(
-  "📝 ISI PESAN:"
+  senderName
 );
 
 console.log(
-  pesanWhatsApp || "tidak ada teks"
+  "💬 ISI PESAN:",
+  messageText || "(pesan kosong)"
+);
+
+console.log(
+  "📱 TIPE:",
+  messageType
 );
           
           // ====================================================
