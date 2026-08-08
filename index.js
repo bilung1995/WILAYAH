@@ -2157,14 +2157,11 @@ if (!isiPesan) {
   return;
 }
 
-await forwardWhatsAppMessage({
+await forwardWhatsAppMessage(
   bot,
   database,
-  isiPesan,
-  namaGrup,
-  namaPengirim
-});
-
+  data
+);
   // ====================================================
 // TERUSKAN PESAN KE GREEN ROUTER
 // ====================================================
