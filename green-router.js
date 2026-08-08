@@ -1,7 +1,158 @@
 // ======================================================
 // GREEN ROUTER
-// WhatsApp Group → Telegram User
-// Berdasarkan Kabupaten + Kecamatan
+// WHATSAPP → TELEGRAM BERDASARKAN KABUPATEN + KECAMATAN
+// ======================================================
+
+
+// ======================================================
+// AMBIL ISI PESAN WHATSAPP
+// ======================================================
+
+function getWhatsAppText(data) {
+
+  return (
+    data?.messageData?.textMessageData?.textMessage ||
+    data?.messageData?.extendedTextMessageData?.text ||
+    ""
+  ).trim();
+
+}
+
+
+// ======================================================
+// NORMALISASI TEKS
+// ======================================================
+
+function normalizeText(text) {
+
+  return String(text || "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+}
+
+
+// ======================================================
+// CARI WILAYAH DARI PESAN
+// ======================================================
+
+function getWilayahFromMessage(text) {
+
+  const originalLines =
+    String(text || "")
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(Boolean);
+
+  if (originalLines.length < 3) {
+    return null;
+  }
+
+
+  // ====================================================
+  // FORMAT DENGAN LABEL
+  //
+  // KABUPATEN : KAB SERANG
+  // KECAMATAN : LEBAK WANGI
+  // ====================================================
+
+  let kabupaten = "";
+  let kecamatan = "";
+
+  for (const line of originalLines) {
+
+    const kabMatch =
+      line.match(
+        /^KABUPATEN(?:\/KOTA)?\s*:\s*(.+)$/i
+      );
+
+    if (kabMatch) {
+      kabupaten = kabMatch[1].trim();
+    }
+
+
+    const kecMatch =
+      line.match(
+        /^KECAMATAN\s*:\s*(.+)$/i
+      );
+
+    if (kecMatch) {
+      kecamatan = kecMatch[1].trim();
+    }
+
+  }
+
+
+  if (kabupaten && kecamatan) {
+
+    return {
+      kabupaten,
+      kecamatan
+    };
+
+  }
+
+
+  // ====================================================
+  // FORMAT TANPA LABEL
+  //
+  // PAPUA
+  // KOTA JAYAPURA
+  // JAYAPURA UTARA
+  // ROMBON
+  //
+  // Baris 1 = Provinsi
+  // Baris 2 = Kabupaten/Kota
+  // Baris 3 = Kecamatan
+  // ====================================================
+
+  if (originalLines.length >= 3) {
+
+    const kemungkinanKabupaten =
+      originalLines[1];
+
+    const kemungkinanKecamatan =
+      originalLines[2];
+
+
+    // Jangan ambil baris yang jelas bukan wilayah
+
+    const bukanWilayah =
+      /^(SALDO|LANJUT|DPT|HARGA|RP|JUAL|BUTUH|INFO)/i;
+
+
+    if (
+      !bukanWilayah.test(
+        kemungkinanKabupaten
+      ) &&
+      !bukanWilayah.test(
+        kemungkinanKecamatan
+      )
+    ) {
+
+      return {
+
+        kabupaten:
+          kemungkinanKabupaten,
+
+        kecamatan:
+          kemungkinanKecamatan
+
+      };
+
+    }
+
+  }
+
+
+  return null;
+
+}
+
+
+// ======================================================
+// TERUSKAN PESAN KE USER TELEGRAM
 // ======================================================
 
 async function forwardWhatsAppMessage(
@@ -12,275 +163,201 @@ async function forwardWhatsAppMessage(
 
   try {
 
-    // ==================================================
-    // CEK DATA GREEN API
-    // ==================================================
+    const isiPesan =
+      getWhatsAppText(data);
 
-    const senderData =
-      data?.senderData || {};
-
-    const messageData =
-      data?.messageData || {};
 
     // ==================================================
-    // HANYA PROSES PESAN DARI GRUP
+    // TIDAK ADA PESAN
     // ==================================================
 
-    const groupId =
-      senderData.chatId || "";
-
-    if (
-      !groupId.endsWith("@g.us")
-    ) {
-
-      return;
-
-    }
-
-    // ==================================================
-    // DATA GRUP
-    // ==================================================
-
-    const groupName =
-      senderData.chatName ||
-      "Grup WhatsApp";
-
-    const senderName =
-      senderData.senderName ||
-      "Tidak diketahui";
-
-    // ==================================================
-    // AMBIL ISI PESAN
-    // ==================================================
-
-    const typeMessage =
-      messageData.typeMessage || "";
-
-    let messageText = "";
-
-    if (
-      typeMessage === "textMessage"
-    ) {
-
-      messageText =
-        messageData
-          ?.textMessageData
-          ?.textMessage || "";
-
-    }
-
-    else if (
-      typeMessage === "extendedTextMessage"
-    ) {
-
-      messageText =
-        messageData
-          ?.extendedTextMessageData
-          ?.text || "";
-
-    }
-
-    else {
-
-      messageText =
-        messageData
-          ?.textMessageData
-          ?.textMessage ||
-        messageData
-          ?.extendedTextMessageData
-          ?.text ||
-        "";
-
-    }
-
-    // ==================================================
-    // PESAN HARUS ADA
-    // ==================================================
-
-    if (!messageText.trim()) {
+    if (!isiPesan) {
 
       console.log(
-        "ℹ️ GREEN ROUTER: Pesan kosong."
+        "⚠️ GREEN ROUTER: pesan kosong."
       );
 
       return;
 
     }
 
+
     // ==================================================
-    // CARI KABUPATEN
+    // AMBIL WILAYAH
     // ==================================================
 
-    const kabupatenMatch =
-      messageText.match(
-        /KABUPATEN\s*:\s*(.+)/i
+    const wilayahPesan =
+      getWilayahFromMessage(
+        isiPesan
       );
 
-    // ==================================================
-    // CARI KECAMATAN
-    // ==================================================
 
-    const kecamatanMatch =
-      messageText.match(
-        /KECAMATAN\s*:\s*(.+)/i
-      );
-
-    // ==================================================
-    // KALAU FORMAT TIDAK SESUAI
-    // ==================================================
-
-    if (
-      !kabupatenMatch ||
-      !kecamatanMatch
-    ) {
+    if (!wilayahPesan) {
 
       console.log(
-        "ℹ️ GREEN ROUTER: Kabupaten/kecamatan tidak ditemukan."
+        "⚠️ GREEN ROUTER: Kabupaten/Kecamatan tidak ditemukan."
       );
 
       return;
 
     }
 
-    // ==================================================
-    // NORMALISASI
-    // ==================================================
 
-    const kabupaten =
-      kabupatenMatch[1]
-        .trim()
-        .toUpperCase();
+    const kabupatenPesan =
+      normalizeText(
+        wilayahPesan.kabupaten
+      );
 
-    const kecamatan =
-      kecamatanMatch[1]
-        .trim()
-        .toUpperCase();
+    const kecamatanPesan =
+      normalizeText(
+        wilayahPesan.kecamatan
+      );
+
 
     console.log(
-      "🏙️ ROUTER KABUPATEN:",
-      kabupaten
+      "📍 ROUTER KABUPATEN:",
+      wilayahPesan.kabupaten
     );
 
     console.log(
       "📍 ROUTER KECAMATAN:",
-      kecamatan
+      wilayahPesan.kecamatan
     );
 
-    // ==================================================
-    // CEK DATABASE LOKASI
-    // ==================================================
-
-    if (
-      !database.locations
-    ) {
-
-      console.log(
-        "⚠️ DATABASE LOCATIONS TIDAK ADA."
-      );
-
-      return;
-
-    }
-
-    let jumlahTerkirim = 0;
 
     // ==================================================
     // CARI USER TELEGRAM
     // ==================================================
 
+    const users =
+      database.users || {};
+
+    const locations =
+      database.locations || {};
+
+
+    let jumlahTerkirim = 0;
+
+
     for (
-      const userId in database.locations
+      const chatId of Object.keys(users)
     ) {
 
-      const locations =
-        database.locations[userId];
+      const userLocations =
+        locations[chatId];
+
 
       if (
-        !Array.isArray(locations)
+        !Array.isArray(userLocations) ||
+        userLocations.length === 0
       ) {
 
         continue;
 
       }
 
-      // ==================================================
-      // CEK SETIAP WILAYAH USER
-      // ==================================================
+
+      // ================================================
+      // CEK WILAYAH USER
+      // ================================================
 
       const cocok =
-        locations.some(
+        userLocations.some(
           location => {
 
-            const userKabupaten =
-              String(
-                location?.kabupaten || ""
-              )
-                .trim()
-                .toUpperCase();
+            const kabupatenUser =
+              normalizeText(
+                location.kabupaten
+              );
 
-            const userKecamatan =
-              String(
-                location?.kecamatan || ""
-              )
-                .trim()
-                .toUpperCase();
+            const kecamatanUser =
+              normalizeText(
+                location.kecamatan
+              );
+
 
             return (
-              userKabupaten ===
-                kabupaten &&
-              userKecamatan ===
-                kecamatan
+
+              kabupatenUser ===
+              kabupatenPesan
+
+              &&
+
+              kecamatanUser ===
+              kecamatanPesan
+
             );
 
           }
         );
 
-      // ==================================================
-      // KALAU TIDAK COCOK
-      // ==================================================
 
       if (!cocok) {
-
         continue;
-
       }
 
-      // ==================================================
-      // KIRIM KE TELEGRAM
-      // ==================================================
+
+      // ================================================
+      // INFO GRUP & PENGIRIM
+      // ================================================
+
+      const namaGrup =
+        data?.senderData?.chatName ||
+        "Grup WhatsApp";
+
+      const namaPengirim =
+        data?.senderData?.senderName ||
+        "Tidak diketahui";
+
+
+      // ================================================
+      // PESAN UNTUK TELEGRAM
+      // ================================================
+
+      const pesanTelegram =
+
+        "📢 PESAN WHATSAPP MASUK\n\n" +
+
+        `👥 Grup: ${namaGrup}\n` +
+
+        `👤 Pengirim: ${namaPengirim}\n\n` +
+
+        `📍 Kabupaten/Kota: ${
+          wilayahPesan.kabupaten
+        }\n` +
+
+        `📍 Kecamatan: ${
+          wilayahPesan.kecamatan
+        }\n\n` +
+
+        "━━━━━━━━━━━━━━━━━━\n\n" +
+
+        isiPesan;
+
+
+      // ================================================
+      // KIRIM KE USER
+      // ================================================
 
       try {
 
         await bot.sendMessage(
-
-          userId,
-
-          "📢 PESAN WILAYAH ANDA\n\n" +
-
-          `👥 Grup: ${groupName}\n` +
-
-          `👤 Pengirim: ${senderName}\n\n` +
-
-          `🏙️ Kabupaten: ${kabupaten}\n` +
-
-          `📍 Kecamatan: ${kecamatan}\n\n` +
-
-          "━━━━━━━━━━━━━━━━\n\n" +
-
-          messageText
-
+          chatId,
+          pesanTelegram
         );
+
 
         jumlahTerkirim++;
 
+
         console.log(
-          `✅ PESAN DITERUSKAN → USER ${userId}`
+          `✅ PESAN DITERUSKAN → ${chatId}`
         );
 
       } catch (error) {
 
         console.error(
-          `❌ GAGAL KIRIM KE USER ${userId}:`,
+          `❌ GAGAL KIRIM KE ${chatId}:`,
           error.message
         );
 
@@ -288,18 +365,20 @@ async function forwardWhatsAppMessage(
 
     }
 
+
     // ==================================================
     // HASIL ROUTER
     // ==================================================
 
     console.log(
-      `📨 GREEN ROUTER SELESAI — TERKIRIM: ${jumlahTerkirim}`
+      `📨 ROUTER SELESAI — TERKIRIM: ${jumlahTerkirim}`
     );
+
 
   } catch (error) {
 
     console.error(
-      "❌ GREEN ROUTER ERROR:",
+      "❌ ERROR GREEN ROUTER:",
       error
     );
 
@@ -313,5 +392,7 @@ async function forwardWhatsAppMessage(
 // ======================================================
 
 module.exports = {
+
   forwardWhatsAppMessage
+
 };
