@@ -1914,6 +1914,10 @@ const server =
 
       try {
 
+        // ======================================================
+        // HEALTH CHECK
+        // ======================================================
+
         if (
           req.url === "/" ||
           req.url === "/health"
@@ -1937,6 +1941,121 @@ const server =
           return;
         }
 
+
+        // ======================================================
+        // GREEN API WEBHOOK
+        // ======================================================
+
+        if (
+          req.method === "POST" &&
+          req.url === "/green-api/webhook"
+        ) {
+
+          let body = "";
+
+          req.on(
+            "data",
+            chunk => {
+
+              body +=
+                chunk.toString();
+
+            }
+          );
+
+          await new Promise(
+            resolve => {
+
+              req.on(
+                "end",
+                resolve
+              );
+
+            }
+          );
+
+
+          // ====================================================
+          // PARSE DATA GREEN API
+          // ====================================================
+
+          let data;
+
+          try {
+
+            data =
+              JSON.parse(body);
+
+          } catch (error) {
+
+            console.error(
+              "❌ GREEN API JSON ERROR:",
+              error
+            );
+
+            res.writeHead(
+              400,
+              {
+                "Content-Type":
+                  "application/json"
+              }
+            );
+
+            res.end(
+              JSON.stringify({
+                status: "error",
+                message:
+                  "Invalid JSON"
+              })
+            );
+
+            return;
+          }
+
+
+          // ====================================================
+          // TAMPILKAN DATA DI LOG RAILWAY
+          // ====================================================
+
+          console.log(
+            "📱 GREEN API WEBHOOK MASUK:"
+          );
+
+          console.log(
+            JSON.stringify(
+              data,
+              null,
+              2
+            )
+          );
+
+
+          // ====================================================
+          // BALAS GREEN API
+          // ====================================================
+
+          res.writeHead(
+            200,
+            {
+              "Content-Type":
+                "application/json"
+            }
+          );
+
+          res.end(
+            JSON.stringify({
+              status: "ok"
+            })
+          );
+
+          return;
+        }
+
+
+        // ======================================================
+        // URL TIDAK DITEMUKAN
+        // ======================================================
+
         res.writeHead(
           404,
           {
@@ -1947,9 +2066,11 @@ const server =
 
         res.end(
           JSON.stringify({
-            error: "Not Found"
+            error:
+              "Not Found"
           })
         );
+
 
       } catch (error) {
 
@@ -1958,10 +2079,19 @@ const server =
           error
         );
 
-        res.writeHead(500);
+        res.writeHead(
+          500,
+          {
+            "Content-Type":
+              "application/json"
+          }
+        );
 
         res.end(
-          "Internal Server Error"
+          JSON.stringify({
+            error:
+              "Internal Server Error"
+          })
         );
 
       }
@@ -1970,6 +2100,7 @@ const server =
   );
 
 
+        
 // ======================================================
 // START SERVER
 // ======================================================
