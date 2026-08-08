@@ -2240,62 +2240,44 @@ const server =
             } else {
 
               // ==================================================
-              // CARI KABUPATEN
-              // ==================================================
+// BACA KABUPATEN + KECAMATAN DARI FILTER.JS
+// ==================================================
 
-              const kabupatenMatch =
-                isiPesan.match(
-                  /(?:KAB|KABUPATEN)\s*:\s*(.+)/i
-                );
+const wilayahPesan =
+  filter.parseWilayah(isiPesan);
 
+const kabupatenPesan =
+  wilayahPesan.kabupaten;
 
-              // ==================================================
-              // CARI KECAMATAN
-              // ==================================================
-
-              const kecamatanMatch =
-                isiPesan.match(
-                  /(?:KEC|KECAMATAN)\s*:\s*(.+)/i
-                );
+const kecamatanPesan =
+  wilayahPesan.kecamatan;
 
 
-              // ==================================================
-              // WAJIB ADA KABUPATEN + KECAMATAN
-              // ==================================================
+// ==================================================
+// WAJIB ADA KABUPATEN + KECAMATAN
+// ==================================================
 
-              if (
-                !kabupatenMatch ||
-                !kecamatanMatch
-              ) {
+if (
+  !kabupatenPesan ||
+  !kecamatanPesan
+) {
 
-                console.log(
-                  "ℹ️ Kabupaten/Kecamatan tidak ditemukan. Pesan tidak diteruskan."
-                );
+  console.log(
+    "ℹ️ Kabupaten/Kecamatan tidak ditemukan. Pesan tidak diteruskan."
+  );
 
-              } else {
+} else {
 
-                const kabupatenPesan =
-                  kabupatenMatch[1]
-                    .trim()
-                    .toUpperCase();
+  console.log(
+    "🏙️ KABUPATEN:",
+    kabupatenPesan
+  );
 
-                const kecamatanPesan =
-                  kecamatanMatch[1]
-                    .trim()
-                    .toUpperCase();
-
-
-                console.log(
-                  "🏙️ KABUPATEN:",
-                  kabupatenPesan
-                );
-
-                console.log(
-                  "📍 KECAMATAN:",
-                  kecamatanPesan
-                );
-
-
+  console.log(
+    "📍 KECAMATAN:",
+    kecamatanPesan
+  );
+  
                 // ==================================================
                 // CARI USER YANG COCOK
                 // HANYA KABUPATEN + KECAMATAN
