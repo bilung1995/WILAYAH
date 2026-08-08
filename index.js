@@ -12,6 +12,7 @@ const TelegramBot = require("node-telegram-bot-api");
 
 const wilayah = require("./wilayah");
 const subscription = require("./subscription");
+const topup = require("./topup");
 
 // ======================================================
 // ENV
@@ -1363,166 +1364,163 @@ bot.on(
 
 
       // ==================================================
-      // PILIH PAKET — 1 MINGGU
-      // ==================================================
+// PILIH PAKET — 1 MINGGU
+// ==================================================
 
-      if (
-        data === "SUBSCRIBE_WEEK"
-      ) {
+if (
+  data === "SUBSCRIBE_WEEK"
+) {
 
-        await bot.answerCallbackQuery(
-          query.id
-        );
+  await bot.answerCallbackQuery(
+    query.id
+  );
 
-        const result =
-          subscription.createSubscriptionRequest(
-            user,
-            "WEEK"
-          );
+  const result =
+    subscription.createSubscriptionRequest(
+      user,
+      "WEEK"
+    );
 
-        if (!result.success) {
+  if (!result.success) {
 
-          await bot.sendMessage(
-            chatId,
-            result.message
-          );
+    await bot.sendMessage(
+      chatId,
+      result.message
+    );
 
-          return;
-        }
+    return;
+  }
 
-        user.waitingPaymentProof =
-          true;
+  user.waitingPaymentProof =
+    true;
 
-        saveDatabase();
+  saveDatabase();
 
-        await bot.sendMessage(
+  await bot.sendMessage(
 
-          chatId,
+    chatId,
 
-          "💳 PEMBAYARAN SUBSCRIPTION\n\n" +
+    "💳 PEMBAYARAN SUBSCRIPTION\n\n" +
 
-          "📦 Paket: 1 Minggu\n" +
-          "💰 Harga: Rp35.000\n" +
-          "⏳ Masa aktif: 7 hari\n\n" +
+    "📦 Paket: 1 Minggu\n" +
+    "💰 Harga: Rp35.000\n" +
+    "⏳ Masa aktif: 7 hari\n\n" +
 
-          "Silakan lakukan pembayaran.\n\n" +
+    topup.getTopupMessage() +
 
-          "📸 Setelah pembayaran selesai,\n" +
-          "kirim FOTO bukti transfer di chat ini."
+    "\n\n📸 Setelah transfer, " +
+    "kirim FOTO bukti pembayaran di chat ini."
 
-        );
+  );
 
-        return;
-      }
-
-
-      // ==================================================
-      // PILIH PAKET — 1 BULAN
-      // ==================================================
-
-      if (
-        data === "SUBSCRIBE_MONTH"
-      ) {
-
-        await bot.answerCallbackQuery(
-          query.id
-        );
-
-        const result =
-          subscription.createSubscriptionRequest(
-            user,
-            "MONTH"
-          );
-
-        if (!result.success) {
-
-          await bot.sendMessage(
-            chatId,
-            result.message
-          );
-
-          return;
-        }
-
-        user.waitingPaymentProof =
-          true;
-
-        saveDatabase();
-
-        await bot.sendMessage(
-
-          chatId,
-
-          "💳 PEMBAYARAN SUBSCRIPTION\n\n" +
-
-          "📦 Paket: 1 Bulan\n" +
-          "💰 Harga: Rp100.000\n" +
-          "⏳ Masa aktif: 30 hari\n\n" +
-
-          "Silakan lakukan pembayaran.\n\n" +
-
-          "📸 Setelah pembayaran selesai,\n" +
-          "kirim FOTO bukti transfer di chat ini."
-
-        );
-
-        return;
-      }
-
+  return;
+}
 
       // ==================================================
-      // PILIH PAKET — 2 BULAN
+// PILIH PAKET — 1 BULAN
+// ==================================================
+
+if (
+  data === "SUBSCRIBE_MONTH"
+) {
+
+  await bot.answerCallbackQuery(
+    query.id
+  );
+
+  const result =
+    subscription.createSubscriptionRequest(
+      user,
+      "MONTH"
+    );
+
+  if (!result.success) {
+
+    await bot.sendMessage(
+      chatId,
+      result.message
+    );
+
+    return;
+  }
+
+  user.waitingPaymentProof =
+    true;
+
+  saveDatabase();
+
+  await bot.sendMessage(
+
+    chatId,
+
+    "💳 PEMBAYARAN SUBSCRIPTION\n\n" +
+
+    "📦 Paket: 1 Bulan\n" +
+    "💰 Harga: Rp100.000\n" +
+    "⏳ Masa aktif: 30 hari\n\n" +
+
+    topup.getTopupMessage() +
+
+    "\n\n📸 Setelah transfer, " +
+    "kirim FOTO bukti pembayaran di chat ini."
+
+  );
+
+  return;
+}
+
       // ==================================================
+// PILIH PAKET — 2 BULAN
+// ==================================================
 
-      if (
-        data === "SUBSCRIBE_TWO_MONTH"
-      ) {
+if (
+  data === "SUBSCRIBE_TWO_MONTH"
+) {
 
-        await bot.answerCallbackQuery(
-          query.id
-        );
+  await bot.answerCallbackQuery(
+    query.id
+  );
 
-        const result =
-          subscription.createSubscriptionRequest(
-            user,
-            "TWO_MONTH"
-          );
+  const result =
+    subscription.createSubscriptionRequest(
+      user,
+      "TWO_MONTH"
+    );
 
-        if (!result.success) {
+  if (!result.success) {
 
-          await bot.sendMessage(
-            chatId,
-            result.message
-          );
+    await bot.sendMessage(
+      chatId,
+      result.message
+    );
 
-          return;
-        }
+    return;
+  }
 
-        user.waitingPaymentProof =
-          true;
+  user.waitingPaymentProof =
+    true;
 
-        saveDatabase();
+  saveDatabase();
 
-        await bot.sendMessage(
+  await bot.sendMessage(
 
-          chatId,
+    chatId,
 
-          "💳 PEMBAYARAN SUBSCRIPTION\n\n" +
+    "💳 PEMBAYARAN SUBSCRIPTION\n\n" +
 
-          "📦 Paket: 2 Bulan\n" +
-          "💰 Harga: Rp180.000\n" +
-          "⏳ Masa aktif: 60 hari\n\n" +
+    "📦 Paket: 2 Bulan\n" +
+    "💰 Harga: Rp180.000\n" +
+    "⏳ Masa aktif: 60 hari\n\n" +
 
-          "Silakan lakukan pembayaran.\n\n" +
+    topup.getTopupMessage() +
 
-          "📸 Setelah pembayaran selesai,\n" +
-          "kirim FOTO bukti transfer di chat ini."
+    "\n\n📸 Setelah transfer, " +
+    "kirim FOTO bukti pembayaran di chat ini."
 
-        );
+  );
 
-        return;
-      }
-
+  return;
+}
 
       // ==================================================
       // PROVINSI
