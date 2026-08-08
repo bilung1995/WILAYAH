@@ -1946,79 +1946,10 @@ const server =
         }
 
 
-        // ======================================================
-        // GREEN API WEBHOOK
-        // ======================================================
+        
+          
 
-        if (
-          req.method === "POST" &&
-          req.url === "/green-api/webhook"
-        ) {
-
-          let body = "";
-
-          req.on(
-            "data",
-            chunk => {
-
-              body +=
-                chunk.toString();
-
-            }
-          );
-
-          await new Promise(
-            resolve => {
-
-              req.on(
-                "end",
-                resolve
-              );
-
-            }
-          );
-
-
-          // ====================================================
-          // PARSE DATA GREEN API
-          // ====================================================
-
-          let data;
-
-          try {
-
-            data =
-              JSON.parse(body);
-
-          } catch (error) {
-
-            console.error(
-              "❌ GREEN API JSON ERROR:",
-              error
-            );
-
-            res.writeHead(
-              400,
-              {
-                "Content-Type":
-                  "application/json"
-              }
-            );
-
-            res.end(
-              JSON.stringify({
-                status: "error",
-                message:
-                  "Invalid JSON"
-              })
-            );
-
-            return;
-          }
-
-
-              
-         // ======================================================
+// ======================================================
 // GREEN API WEBHOOK
 // ======================================================
 
@@ -2039,7 +1970,6 @@ if (
   await new Promise(resolve => {
     req.on("end", resolve);
   });
-
 
   // ====================================================
   // PARSE DATA GREEN API
@@ -2076,7 +2006,6 @@ if (
     return;
   }
 
-
   // ====================================================
   // DATA GRUP WHATSAPP
   // ====================================================
@@ -2091,7 +2020,6 @@ if (
   const senderName =
     data?.senderData?.senderName ||
     "Pengirim tidak diketahui";
-
 
   // ====================================================
   // HANYA PROSES GRUP WHATSAPP
@@ -2110,7 +2038,6 @@ if (
       "";
 
     let isiPesan = "";
-
 
     if (
       messageType === "textMessage"
@@ -2131,7 +2058,6 @@ if (
         "";
 
     }
-
 
     console.log(
       "📱 GREEN API WEBHOOK MASUK"
@@ -2162,7 +2088,6 @@ if (
       messageType
     );
 
-
     // ==================================================
     // JIKA TIDAK ADA PESAN TEKS
     // ==================================================
@@ -2175,12 +2100,8 @@ if (
 
     } else {
 
-
       // ==================================================
       // CARI KABUPATEN
-      // MENERIMA:
-      // Kab : Langkat
-      // Kabupaten : Langkat
       // ==================================================
 
       const kabupatenMatch =
@@ -2188,12 +2109,8 @@ if (
           /(?:KAB|KABUPATEN)\s*:\s*(.+)/i
         );
 
-
       // ==================================================
       // CARI KECAMATAN
-      // MENERIMA:
-      // Kec : Kutambaru
-      // Kecamatan : Kutambaru
       // ==================================================
 
       const kecamatanMatch =
@@ -2201,6 +2118,9 @@ if (
           /(?:KEC|KECAMATAN)\s*:\s*(.+)/i
         );
 
+      // ==================================================
+      // WAJIB ADA KABUPATEN + KECAMATAN
+      // ==================================================
 
       if (
         !kabupatenMatch ||
@@ -2212,7 +2132,6 @@ if (
         );
 
       } else {
-
 
         // ==================================================
         // NORMALISASI
@@ -2228,7 +2147,6 @@ if (
             .trim()
             .toUpperCase();
 
-
         console.log(
           "🏙️ KABUPATEN:",
           kabupatenPesan
@@ -2239,10 +2157,9 @@ if (
           kecamatanPesan
         );
 
-
         // ==================================================
-        // CARI USER TELEGRAM
-        // YANG COCOK KABUPATEN + KECAMATAN
+        // CARI USER YANG COCOK
+        // HANYA KABUPATEN + KECAMATAN
         // ==================================================
 
         for (
@@ -2252,13 +2169,11 @@ if (
           const locations =
             database.locations[userId];
 
-
           if (
             !Array.isArray(locations)
           ) {
             continue;
           }
-
 
           for (
             const location of locations
@@ -2271,7 +2186,6 @@ if (
                 .trim()
                 .toUpperCase();
 
-
             const kecamatanUser =
               String(
                 location.kecamatan || ""
@@ -2279,10 +2193,8 @@ if (
                 .trim()
                 .toUpperCase();
 
-
             // ==================================================
             // FILTER UTAMA
-            // HANYA KABUPATEN + KECAMATAN
             // ==================================================
 
             if (
@@ -2296,7 +2208,6 @@ if (
                 "🎯 WILAYAH COCOK USER:",
                 userId
               );
-
 
               // ==================================================
               // KIRIM KE TELEGRAM
@@ -2324,7 +2235,6 @@ if (
 
                 );
 
-
                 console.log(
                   `✅ PESAN DITERUSKAN → ${userId}`
                 );
@@ -2350,10 +2260,8 @@ if (
 
   }
 
-
   // ====================================================
   // BALAS GREEN API
-  // DILAKUKAN SETELAH PROSES FORWARD
   // ====================================================
 
   res.writeHead(
@@ -2371,56 +2279,31 @@ if (
   );
 
   return;
-}            
+}
 
-        // ======================================================
-        // URL TIDAK DITEMUKAN
-        // ======================================================
+// ======================================================
+// URL TIDAK DITEMUKAN
+// ======================================================
 
-        res.writeHead(
-          404,
-          {
-            "Content-Type":
-              "application/json"
-          }
-        );
+res.writeHead(
+  404,
+  {
+    "Content-Type":
+      "application/json"
+  }
+);
 
-        res.end(
-          JSON.stringify({
-            error:
-              "Not Found"
-          })
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          "❌ HTTP ERROR:",
-          error
-        );
-
-        res.writeHead(
-          500,
-          {
-            "Content-Type":
-              "application/json"
-          }
-        );
-
-        res.end(
-          JSON.stringify({
-            error:
-              "Internal Server Error"
-          })
-        );
-
-      }
-
-    }
-  );
+res.end(
+  JSON.stringify({
+    error:
+      "Not Found"
+  })
+);      
+                       
 
 
+              
+        
         
 // ======================================================
 // START SERVER
