@@ -2096,6 +2096,188 @@ console.log(
         }
 
 
+        // ====================================================
+// TERUSKAN PESAN GRUP BERDASARKAN KABUPATEN + KECAMATAN
+// ====================================================
+
+// Hanya proses pesan dari GRUP WhatsApp
+const chatIdWA =
+  data?.senderData?.chatId || "";
+
+if (
+  chatIdWA.endsWith("@g.us")
+) {
+
+  // ==================================================
+  // AMBIL ISI PESAN
+  // ==================================================
+
+  const isiPesan =
+    data?.messageData?.textMessageData?.textMessage ||
+    data?.messageData?.extendedTextMessageData?.text ||
+    "";
+
+  // ==================================================
+  // AMBIL NAMA GRUP & PENGIRIM
+  // ==================================================
+
+  const namaGrup =
+    data?.senderData?.chatName ||
+    "Grup WhatsApp";
+
+  const namaPengirim =
+    data?.senderData?.senderName ||
+    "Tidak diketahui";
+
+  console.log(
+    "📝 ISI PESAN:",
+    isiPesan || "KOSONG"
+  );
+
+  // Kalau tidak ada isi pesan, abaikan
+  if (!isiPesan) {
+    return;
+  }
+
+  // ==================================================
+  // CARI KABUPATEN
+  // ==================================================
+
+  const kabupatenMatch =
+    isiPesan.match(
+      /KABUPATEN\s*:\s*(.+)/i
+    );
+
+  // ==================================================
+  // CARI KECAMATAN
+  // ==================================================
+
+  const kecamatanMatch =
+    isiPesan.match(
+      /KECAMATAN\s*:\s*(.+)/i
+    );
+
+  if (
+    !kabupatenMatch ||
+    !kecamatanMatch
+  ) {
+
+    console.log(
+      "ℹ️ Kabupaten/kecamatan tidak ditemukan."
+    );
+
+  } else {
+
+    const kabupatenPesan =
+      kabupatenMatch[1]
+        .trim()
+        .toUpperCase();
+
+    const kecamatanPesan =
+      kecamatanMatch[1]
+        .trim()
+        .toUpperCase();
+
+    console.log(
+      "🏙️ KABUPATEN:",
+      kabupatenPesan
+    );
+
+    console.log(
+      "📍 KECAMATAN:",
+      kecamatanPesan
+    );
+
+    // ==================================================
+    // CARI USER TELEGRAM YANG COCOK
+    // ==================================================
+
+    for (
+      const userId in database.locations
+    ) {
+
+      const locations =
+        database.locations[userId];
+
+      if (
+        !Array.isArray(locations)
+      ) {
+        continue;
+      }
+
+      for (
+        const location of locations
+      ) {
+
+        const kabupatenUser =
+          String(
+            location.kabupaten || ""
+          )
+            .trim()
+            .toUpperCase();
+
+        const kecamatanUser =
+          String(
+            location.kecamatan || ""
+          )
+            .trim()
+            .toUpperCase();
+
+        // ==================================================
+        // COCOK KABUPATEN + KECAMATAN
+        // ==================================================
+
+        if (
+          kabupatenUser ===
+            kabupatenPesan &&
+          kecamatanUser ===
+            kecamatanPesan
+        ) {
+
+          console.log(
+            "🎯 WILAYAH COCOK USER:",
+            userId
+          );
+
+          // ==================================================
+          // KIRIM KE TELEGRAM
+          // ==================================================
+
+          await bot.sendMessage(
+
+            userId,
+
+            "📢 PESAN WILAYAH ANDA\n\n" +
+
+            `👥 Grup: ${namaGrup}\n` +
+
+            `👤 Pengirim: ${namaPengirim}\n\n` +
+
+            `🏙️ Kabupaten: ${kabupatenPesan}\n` +
+
+            `📍 Kecamatan: ${kecamatanPesan}\n\n` +
+
+            "━━━━━━━━━━━━━━\n\n" +
+
+            isiPesan
+
+          );
+
+          console.log(
+            `✅ PESAN DITERUSKAN → ${userId}`
+          );
+
+        }
+
+      }
+
+    }
+
+  }
+
+}
+
+
         // ======================================================
         // URL TIDAK DITEMUKAN
         // ======================================================
