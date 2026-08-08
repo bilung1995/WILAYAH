@@ -2014,28 +2014,66 @@ const server =
 
 
           // ====================================================
-// GREEN API WEBHOOK — LOG RINGKAS
+// GREEN API WEBHOOK — LOG LENGKAP
 // ====================================================
 
 console.log(
   "📱 GREEN API WEBHOOK MASUK"
 );
 
+// ====================================================
+// NAMA GRUP
+// ====================================================
+
 console.log(
-  "📌 GRUP:",
+  "📌 NAMA GRUP:",
+  data?.senderData?.chatName || "tidak diketahui"
+);
+
+// ====================================================
+// ID GRUP
+// ====================================================
+
+console.log(
+  "🆔 ID GRUP:",
   data?.senderData?.chatId || "tidak diketahui"
 );
+
+// ====================================================
+// PENGIRIM
+// ====================================================
 
 console.log(
   "👤 PENGIRIM:",
   data?.senderData?.senderName || "tidak diketahui"
 );
 
+// ====================================================
+// TIPE PESAN
+// ====================================================
+
 console.log(
   "💬 TIPE:",
   data?.messageData?.typeMessage || "tidak diketahui"
 );
 
+// ====================================================
+// ISI PESAN
+// ====================================================
+
+const pesanWhatsApp =
+  data?.messageData?.textMessageData?.textMessage ||
+  data?.messageData?.extendedTextMessageData?.text ||
+  "";
+
+console.log(
+  "📝 ISI PESAN:"
+);
+
+console.log(
+  pesanWhatsApp || "tidak ada teks"
+);
+          
           // ====================================================
           // BALAS GREEN API
           // ====================================================
