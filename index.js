@@ -13,6 +13,9 @@ const TelegramBot = require("node-telegram-bot-api");
 const wilayah = require("./wilayah");
 const subscription = require("./subscription");
 const topup = require("./topup");
+const {
+  forwardWhatsAppMessage
+} = require("./green-router");
 
 // ======================================================
 // ENV
