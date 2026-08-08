@@ -2140,22 +2140,30 @@ if (
   // ==================================================
 
   const namaGrup =
-    data?.senderData?.chatName ||
-    "Grup WhatsApp";
+  data?.senderData?.chatName ||
+  "Grup WhatsApp";
 
-  const namaPengirim =
-    data?.senderData?.senderName ||
-    "Tidak diketahui";
+const namaPengirim =
+  data?.senderData?.senderName ||
+  "Tidak diketahui";
 
-  console.log(
-    "📝 ISI PESAN:",
-    isiPesan || "KOSONG"
-  );
+console.log(
+  "📝 ISI PESAN:",
+  isiPesan || "KOSONG"
+);
 
-  // Kalau tidak ada isi pesan, abaikan
-  if (!isiPesan) {
-    return;
-  }
+// Kalau tidak ada isi pesan, abaikan
+if (!isiPesan) {
+  return;
+}
+
+await forwardWhatsAppMessage({
+  bot,
+  database,
+  isiPesan,
+  namaGrup,
+  namaPengirim
+});
 
   // ====================================================
 // TERUSKAN PESAN KE GREEN ROUTER
