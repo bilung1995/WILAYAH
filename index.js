@@ -2017,303 +2017,326 @@ const server =
           }
 
 
-          // ====================================================
-// GREEN API WEBHOOK — DATA PESAN WHATSAPP
-// ====================================================
-
-const groupId =
-  data?.senderData?.chatId ||
-  "tidak diketahui";
-
-const groupName =
-  data?.senderData?.chatName ||
-  "Nama grup tidak diketahui";
-
-const senderName =
-  data?.senderData?.senderName ||
-  "Pengirim tidak diketahui";
-
-const messageType =
-  data?.messageData?.typeMessage ||
-  "tidak diketahui";
-
-let messageText = "";
+              
+         // ======================================================
+// GREEN API WEBHOOK
+// ======================================================
 
 if (
-  messageType === "textMessage"
+  req.method === "POST" &&
+  req.url === "/green-api/webhook"
 ) {
 
-  messageText =
-    data?.messageData?.textMessageData?.textMessage ||
-    "";
+  let body = "";
 
-}
+  req.on(
+    "data",
+    chunk => {
+      body += chunk.toString();
+    }
+  );
 
-else if (
-  messageType === "extendedTextMessage"
-) {
-
-  messageText =
-    data?.messageData?.extendedTextMessageData?.text ||
-    "";
-
-}
+  await new Promise(resolve => {
+    req.on("end", resolve);
+  });
 
 
-// ====================================================
-// TAMPILKAN DI RAILWAY
-// ====================================================
+  // ====================================================
+  // PARSE DATA GREEN API
+  // ====================================================
 
-console.log(
-  "📱 GREEN API WEBHOOK MASUK"
-);
+  let data;
 
-console.log(
-  "👥 GRUP WHATSAPP:",
-  groupName
-);
+  try {
 
-console.log(
-  "📌 ID GRUP:",
-  groupId
-);
+    data = JSON.parse(body);
 
-console.log(
-  "👤 PENGIRIM:",
-  senderName
-);
+  } catch (error) {
 
-console.log(
-  "💬 ISI PESAN:",
-  messageText || "(pesan kosong)"
-);
-
-console.log(
-  "📱 TIPE:",
-  messageType
-);
-          
-          // ====================================================
-          // BALAS GREEN API
-          // ====================================================
-
-          res.writeHead(
-            200,
-            {
-              "Content-Type":
-                "application/json"
-            }
-          );
-
-          res.end(
-            JSON.stringify({
-              status: "ok"
-            })
-          );
-
-          return;
-        }
-
-
-         // ====================================================
-// TERUSKAN PESAN GRUP BERDASARKAN
-// KABUPATEN + KECAMATAN
-// ====================================================
-
-// Hanya proses pesan dari GRUP WhatsApp
-const chatIdWA =
-  data?.senderData?.chatId || "";
-
-if (chatIdWA.endsWith("@g.us")) {
-
-  // ==================================================
-  // AMBIL ISI PESAN
-  // ==================================================
-
-  const isiPesan =
-    data?.messageData?.textMessageData?.textMessage ||
-    data?.messageData?.extendedTextMessageData?.text ||
-    "";
-
-  // Kalau tidak ada teks, abaikan
-  if (!isiPesan) {
-
-    console.log(
-      "ℹ️ Pesan WhatsApp tidak memiliki teks."
+    console.error(
+      "❌ GREEN API JSON ERROR:",
+      error.message
     );
 
-  } else {
-
-    // ==================================================
-    // AMBIL NAMA GRUP
-    // ==================================================
-
-    const namaGrup =
-      data?.senderData?.chatName ||
-      "Grup WhatsApp";
-
-    // ==================================================
-    // AMBIL NAMA PENGIRIM
-    // ==================================================
-
-    const namaPengirim =
-      data?.senderData?.senderName ||
-      "Tidak diketahui";
-
-    console.log(
-      "📝 ISI PESAN:",
-      isiPesan
+    res.writeHead(
+      400,
+      {
+        "Content-Type":
+          "application/json"
+      }
     );
 
+    res.end(
+      JSON.stringify({
+        status: "error",
+        message: "Invalid JSON"
+      })
+    );
+
+    return;
+  }
+
+
+  // ====================================================
+  // DATA GRUP WHATSAPP
+  // ====================================================
+
+  const chatIdWA =
+    data?.senderData?.chatId || "";
+
+  const groupName =
+    data?.senderData?.chatName ||
+    "Nama grup tidak diketahui";
+
+  const senderName =
+    data?.senderData?.senderName ||
+    "Pengirim tidak diketahui";
+
+
+  // ====================================================
+  // HANYA PROSES GRUP WHATSAPP
+  // ====================================================
+
+  if (
+    chatIdWA.endsWith("@g.us")
+  ) {
+
     // ==================================================
-    // CARI KABUPATEN
+    // AMBIL ISI PESAN
     // ==================================================
 
-    const kabupatenMatch =
-      isiPesan.match(
-        /(?:KAB|KABUPATEN)\s*:\s*(.+)/i
-      );
+    const messageType =
+      data?.messageData?.typeMessage ||
+      "";
 
-    // ==================================================
-    // CARI KECAMATAN
-    // ==================================================
+    let isiPesan = "";
 
-    const kecamatanMatch =
-      isiPesan.match(
-        /(?:KEC|KECAMATAN)\s*:\s*(.+)/i
-      );
-
-    // ==================================================
-    // KABUPATEN / KECAMATAN TIDAK LENGKAP
-    // ==================================================
 
     if (
-      !kabupatenMatch ||
-      !kecamatanMatch
+      messageType === "textMessage"
     ) {
 
+      isiPesan =
+        data?.messageData?.textMessageData?.textMessage ||
+        "";
+
+    }
+
+    else if (
+      messageType === "extendedTextMessage"
+    ) {
+
+      isiPesan =
+        data?.messageData?.extendedTextMessageData?.text ||
+        "";
+
+    }
+
+
+    console.log(
+      "📱 GREEN API WEBHOOK MASUK"
+    );
+
+    console.log(
+      "👥 GRUP WHATSAPP:",
+      groupName
+    );
+
+    console.log(
+      "📌 ID GRUP:",
+      chatIdWA
+    );
+
+    console.log(
+      "👤 PENGIRIM:",
+      senderName
+    );
+
+    console.log(
+      "💬 ISI PESAN:",
+      isiPesan || "(pesan kosong)"
+    );
+
+    console.log(
+      "📱 TIPE:",
+      messageType
+    );
+
+
+    // ==================================================
+    // JIKA TIDAK ADA PESAN TEKS
+    // ==================================================
+
+    if (!isiPesan) {
+
       console.log(
-        "ℹ️ Kabupaten atau Kecamatan tidak ditemukan."
+        "ℹ️ Pesan tidak memiliki isi teks."
       );
 
     } else {
 
-      // ==================================================
-      // NORMALISASI
-      // ==================================================
-
-      const kabupatenPesan =
-        kabupatenMatch[1]
-          .trim()
-          .toUpperCase();
-
-      const kecamatanPesan =
-        kecamatanMatch[1]
-          .trim()
-          .toUpperCase();
-
-      console.log(
-        "🏙️ KABUPATEN:",
-        kabupatenPesan
-      );
-
-      console.log(
-        "📍 KECAMATAN:",
-        kecamatanPesan
-      );
 
       // ==================================================
-      // CARI USER YANG WILAYAHNYA COCOK
+      // CARI KABUPATEN
+      // MENERIMA:
+      // Kab : Langkat
+      // Kabupaten : Langkat
       // ==================================================
 
-      for (
-        const userId in database.locations
+      const kabupatenMatch =
+        isiPesan.match(
+          /(?:KAB|KABUPATEN)\s*:\s*(.+)/i
+        );
+
+
+      // ==================================================
+      // CARI KECAMATAN
+      // MENERIMA:
+      // Kec : Kutambaru
+      // Kecamatan : Kutambaru
+      // ==================================================
+
+      const kecamatanMatch =
+        isiPesan.match(
+          /(?:KEC|KECAMATAN)\s*:\s*(.+)/i
+        );
+
+
+      if (
+        !kabupatenMatch ||
+        !kecamatanMatch
       ) {
 
-        const locations =
-          database.locations[userId];
+        console.log(
+          "ℹ️ Kabupaten/Kecamatan tidak ditemukan. Pesan tidak diteruskan."
+        );
 
-        if (
-          !Array.isArray(locations)
-        ) {
-          continue;
-        }
+      } else {
+
 
         // ==================================================
-        // CEK SETIAP WILAYAH USER
+        // NORMALISASI
+        // ==================================================
+
+        const kabupatenPesan =
+          kabupatenMatch[1]
+            .trim()
+            .toUpperCase();
+
+        const kecamatanPesan =
+          kecamatanMatch[1]
+            .trim()
+            .toUpperCase();
+
+
+        console.log(
+          "🏙️ KABUPATEN:",
+          kabupatenPesan
+        );
+
+        console.log(
+          "📍 KECAMATAN:",
+          kecamatanPesan
+        );
+
+
+        // ==================================================
+        // CARI USER TELEGRAM
+        // YANG COCOK KABUPATEN + KECAMATAN
         // ==================================================
 
         for (
-          const location of locations
+          const userId in database.locations
         ) {
 
-          const kabupatenUser =
-            String(
-              location.kabupaten || ""
-            )
-              .trim()
-              .toUpperCase();
+          const locations =
+            database.locations[userId];
 
-          const kecamatanUser =
-            String(
-              location.kecamatan || ""
-            )
-              .trim()
-              .toUpperCase();
-
-          // ==================================================
-          // FILTER UTAMA
-          // HANYA KABUPATEN + KECAMATAN
-          // ==================================================
 
           if (
-            kabupatenUser ===
-              kabupatenPesan &&
-            kecamatanUser ===
-              kecamatanPesan
+            !Array.isArray(locations)
+          ) {
+            continue;
+          }
+
+
+          for (
+            const location of locations
           ) {
 
-            console.log(
-              "🎯 WILAYAH COCOK:",
-              userId
-            );
+            const kabupatenUser =
+              String(
+                location.kabupaten || ""
+              )
+                .trim()
+                .toUpperCase();
+
+
+            const kecamatanUser =
+              String(
+                location.kecamatan || ""
+              )
+                .trim()
+                .toUpperCase();
+
 
             // ==================================================
-            // TERUSKAN KE TELEGRAM
+            // FILTER UTAMA
+            // HANYA KABUPATEN + KECAMATAN
             // ==================================================
 
-            try {
-
-              await bot.sendMessage(
-
-                userId,
-
-                "📢 PESAN WILAYAH ANDA\n\n" +
-
-                `👥 Grup: ${namaGrup}\n` +
-
-                `👤 Pengirim: ${namaPengirim}\n\n` +
-
-                `🏙️ Kabupaten: ${kabupatenPesan}\n` +
-
-                `📍 Kecamatan: ${kecamatanPesan}\n\n` +
-
-                "━━━━━━━━━━━━━━\n\n" +
-
-                isiPesan
-
-              );
+            if (
+              kabupatenUser ===
+                kabupatenPesan &&
+              kecamatanUser ===
+                kecamatanPesan
+            ) {
 
               console.log(
-                `✅ PESAN DITERUSKAN → ${userId}`
+                "🎯 WILAYAH COCOK USER:",
+                userId
               );
 
-            } catch (error) {
 
-              console.error(
-                `❌ GAGAL KIRIM KE USER ${userId}:`,
-                error.message
-              );
+              // ==================================================
+              // KIRIM KE TELEGRAM
+              // ==================================================
+
+              try {
+
+                await bot.sendMessage(
+
+                  userId,
+
+                  "📢 PESAN WILAYAH ANDA\n\n" +
+
+                  `👥 Grup: ${groupName}\n` +
+
+                  `👤 Pengirim: ${senderName}\n\n` +
+
+                  `🏙️ Kabupaten: ${kabupatenPesan}\n` +
+
+                  `📍 Kecamatan: ${kecamatanPesan}\n\n` +
+
+                  "━━━━━━━━━━━━━━\n\n" +
+
+                  isiPesan
+
+                );
+
+
+                console.log(
+                  `✅ PESAN DITERUSKAN → ${userId}`
+                );
+
+              } catch (error) {
+
+                console.error(
+                  `❌ GAGAL KIRIM KE USER ${userId}:`,
+                  error.message
+                );
+
+              }
 
             }
 
@@ -2327,7 +2350,28 @@ if (chatIdWA.endsWith("@g.us")) {
 
   }
 
-        }           
+
+  // ====================================================
+  // BALAS GREEN API
+  // DILAKUKAN SETELAH PROSES FORWARD
+  // ====================================================
+
+  res.writeHead(
+    200,
+    {
+      "Content-Type":
+        "application/json"
+    }
+  );
+
+  res.end(
+    JSON.stringify({
+      status: "ok"
+    })
+  );
+
+  return;
+}            
 
         // ======================================================
         // URL TIDAK DITEMUKAN
