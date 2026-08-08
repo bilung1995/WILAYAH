@@ -17,6 +17,8 @@ const {
   forwardWhatsAppMessage
 } = require("./green-router");
 const forwardRouter = require("./forward-router");
+const filter = require("./filter");
+
 
 // ======================================================
 // ENV
