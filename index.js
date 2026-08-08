@@ -2014,21 +2014,27 @@ const server =
 
 
           // ====================================================
-          // TAMPILKAN DATA DI LOG RAILWAY
-          // ====================================================
+// GREEN API WEBHOOK — LOG RINGKAS
+// ====================================================
 
-          console.log(
-            "📱 GREEN API WEBHOOK MASUK:"
-          );
+console.log(
+  "📱 GREEN API WEBHOOK MASUK"
+);
 
-          console.log(
-            JSON.stringify(
-              data,
-              null,
-              2
-            )
-          );
+console.log(
+  "📌 GRUP:",
+  data?.senderData?.chatId || "tidak diketahui"
+);
 
+console.log(
+  "👤 PENGIRIM:",
+  data?.senderData?.senderName || "tidak diketahui"
+);
+
+console.log(
+  "💬 TIPE:",
+  data?.messageData?.typeMessage || "tidak diketahui"
+);
 
           // ====================================================
           // BALAS GREEN API
