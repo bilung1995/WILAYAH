@@ -1,6 +1,5 @@
 // ======================================================
 // FILTER.JS
-// FILTER USER BERDASARKAN KABUPATEN/KOTA + KECAMATAN
 // ======================================================
 
 function normalize(value) {
@@ -12,7 +11,7 @@ function normalize(value) {
 
 
 // ======================================================
-// BACA WILAYAH DARI PESAN WHATSAPP
+// MEMBACA KABUPATEN/KOTA + KECAMATAN DARI PESAN
 // ======================================================
 
 function parseWilayah(message) {
@@ -22,11 +21,9 @@ function parseWilayah(message) {
   let kabupaten = "";
   let kecamatan = "";
 
-  // ====================================================
-  // FORMAT:
-  // Kab : Langkat
-  // Kec : Kutambaru
-  // ====================================================
+  // ----------------------------------------------------
+  // FORMAT BERLABEL
+  // ----------------------------------------------------
 
   const kabMatch = text.match(
     /(?:KABUPATEN|KAB)\s*:\s*(.+)/i
@@ -43,12 +40,13 @@ function parseWilayah(message) {
 
   } else {
 
-    // ==================================================
-    // FORMAT:
-    // PAPUA
-    // KOTA JAYAPURA
-    // JAYAPURA UTARA
-    // ==================================================
+    // --------------------------------------------------
+    // FORMAT BARIS
+    //
+    // PROVINSI
+    // KABUPATEN/KOTA
+    // KECAMATAN
+    // --------------------------------------------------
 
     const lines = text
       .split(/\r?\n/)
@@ -72,14 +70,10 @@ function parseWilayah(message) {
 
 
 // ======================================================
-// CARI USER YANG COCOK
+// MENCARI USER YANG WILAYAHNYA COCOK
 // ======================================================
 
-function findMatchingUsers(
-  database,
-  kabupaten,
-  kecamatan
-) {
+function findMatchingUsers(database, kabupaten, kecamatan) {
 
   const targetKabupaten =
     normalize(kabupaten);
@@ -93,15 +87,13 @@ function findMatchingUsers(
     !targetKabupaten ||
     !targetKecamatan
   ) {
-
     return matchedUsers;
-
   }
 
 
-  // ====================================================
-  // LOOP SEMUA USER
-  // ====================================================
+  // ----------------------------------------------------
+  // CEK SEMUA USER
+  // ----------------------------------------------------
 
   for (
     const userId in database.locations
@@ -110,50 +102,39 @@ function findMatchingUsers(
     const locations =
       database.locations[userId];
 
-    if (
-      !Array.isArray(locations)
-    ) {
+    if (!Array.isArray(locations)) {
       continue;
     }
 
 
-    // ==================================================
-    // CEK SETIAP WILAYAH USER
-    // ==================================================
+    // --------------------------------------------------
+    // CEK SEMUA WILAYAH MILIK USER
+    // --------------------------------------------------
 
     for (
       const location of locations
     ) {
 
       const userKabupaten =
-        normalize(
-          location.kabupaten
-        );
+        normalize(location.kabupaten);
 
       const userKecamatan =
-        normalize(
-          location.kecamatan
-        );
+        normalize(location.kecamatan);
 
 
-      // ==================================================
-      // FILTER UTAMA
-      // ==================================================
+      // ------------------------------------------------
+      // HARUS COCOK KABUPATEN/KOTA
+      // DAN KECAMATAN
+      // ------------------------------------------------
 
       if (
-        userKabupaten ===
-          targetKabupaten &&
-
-        userKecamatan ===
-          targetKecamatan
+        userKabupaten === targetKabupaten &&
+        userKecamatan === targetKecamatan
       ) {
 
-        matchedUsers.push(
-          userId
-        );
+        matchedUsers.push(userId);
 
         break;
-
       }
 
     }
@@ -161,7 +142,6 @@ function findMatchingUsers(
   }
 
   return matchedUsers;
-
 }
 
 
